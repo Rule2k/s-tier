@@ -4,4 +4,7 @@ services:
     container_name: s-tier
     ports:
       - "127.0.0.1:3001:3000"
+    environment:
+      - GRID_API_URL=${GRID_API_URL}
+      - GRID_API_KEY=${GRID_API_KEY}
     restart: unless-stopped
