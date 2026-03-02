@@ -10,21 +10,32 @@ const TeamRow = ({
   isFinished: boolean;
 }) => (
   <div
-    className={`flex items-center justify-between ${
+    className={`flex items-center gap-2.5 ${
       isFinished && !team.isWinner ? "opacity-40" : "text-white"
     }`}
   >
-    <div className="flex items-center gap-2.5">
-      {team.imageUrl ? (
-        <img src={team.imageUrl} alt={team.name} className="h-6 w-6" />
-      ) : (
-        <div className="h-6 w-6 rounded bg-gray-700" />
-      )}
-      <span className="text-sm font-medium">{team.name}</span>
-    </div>
-    <span className="w-6 text-center text-base font-bold">
-      {team.score ?? "-"}
-    </span>
+    {team.imageUrl ? (
+      <img src={team.imageUrl} alt={team.name} className="h-6 w-6" />
+    ) : (
+      <div className="h-6 w-6 rounded bg-gray-700" />
+    )}
+    <span className="text-sm font-medium">{team.name}</span>
+  </div>
+);
+
+const ScoreRow = ({
+  team,
+  isFinished,
+}: {
+  team: Match["teams"][number];
+  isFinished: boolean;
+}) => (
+  <div
+    className={`text-center text-base font-bold ${
+      isFinished && !team.isWinner ? "opacity-40" : "text-white"
+    }`}
+  >
+    {team.score ?? "-"}
   </div>
 );
 
@@ -43,9 +54,9 @@ export const MatchCard = ({ match }: { match: Match }) => {
 
   return (
     <div
-      className={`flex gap-4 rounded-lg border border-gray-800 border-l-2 bg-gray-900/60 px-4 py-3 ${borderColor[match.status]}`}
+      className={`flex items-center gap-4 rounded-lg border border-gray-800 border-l-2 bg-gray-900/60 px-4 py-3 ${borderColor[match.status]}`}
     >
-      <div className="flex w-16 shrink-0 flex-col items-center justify-center gap-1">
+      <div className="flex w-16 shrink-0 flex-col items-center gap-1">
         <span className="text-xs text-gray-500">{time}</span>
         <StatusBadge status={match.status} />
       </div>
@@ -58,10 +69,19 @@ export const MatchCard = ({ match }: { match: Match }) => {
           />
         ))}
       </div>
-      <div className="flex shrink-0 items-center">
+      <div className="shrink-0">
         <span className="text-xs font-medium text-gray-500">
           {match.format}
         </span>
+      </div>
+      <div className="w-6 shrink-0 space-y-1.5">
+        {match.teams.map((team) => (
+          <ScoreRow
+            key={team.name}
+            team={team}
+            isFinished={match.status === "finished"}
+          />
+        ))}
       </div>
     </div>
   );

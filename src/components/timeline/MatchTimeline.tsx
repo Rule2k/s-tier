@@ -3,6 +3,21 @@ import { MatchCard } from "./MatchCard";
 import { DateSeparator } from "./DateSeparator";
 import { startOfDay } from "date-fns";
 
+const statusOrder: Record<Match["status"], number> = {
+  finished: 0,
+  running: 1,
+  not_started: 2,
+  postponed: 3,
+  canceled: 4,
+};
+
+const sortMatches = (matches: Match[]): Match[] =>
+  [...matches].sort((a, b) => {
+    const statusDiff = statusOrder[a.status] - statusOrder[b.status];
+    if (statusDiff !== 0) return statusDiff;
+    return new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime();
+  });
+
 const groupByDate = (matches: Match[]): Map<string, Match[]> => {
   const groups = new Map<string, Match[]>();
   for (const match of matches) {
@@ -16,9 +31,7 @@ const groupByDate = (matches: Match[]): Map<string, Match[]> => {
 
 export const MatchTimeline = ({ matches }: { matches: Match[] }) => {
   const valid = matches.filter((m) => m.scheduledAt);
-  const sorted = valid.sort(
-    (a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime()
-  );
+  const sorted = sortMatches(valid);
   const grouped = groupByDate(sorted);
 
   return (
