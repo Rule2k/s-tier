@@ -1,16 +1,20 @@
-import type { Team } from "./team";
-import type { Tournament } from "./tournament";
-
-export type MatchStatus = "upcoming" | "live" | "completed";
+export type MatchStatus = "not_started" | "running" | "finished" | "canceled" | "postponed";
 
 export interface Match {
   id: string;
   status: MatchStatus;
-  startTimeScheduled: string;
+  scheduledAt: string;
   format: string;
-  tournament: Tournament;
+  tournament: {
+    id: string;
+    name: string;
+    tier: string;
+  };
   teams: {
-    info: Team;
+    name: string;
+    acronym: string | null;
+    imageUrl: string | null;
     score: number | null;
+    isWinner: boolean;
   }[];
 }
