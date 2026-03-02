@@ -19,5 +19,5 @@ jobs:
             cd /var/www/s-tier
             git pull origin main
             docker compose build
-            GRID_API_KEY=${{ secrets.GRID_API_KEY }} docker compose up -d
+            GRID_API_KEY=${{ secrets.GRID_API_KEY }} PANDASCORE_API_KEY=${{ secrets.PANDASCORE_API_KEY }} docker compose up -d
             docker image prune -f
