@@ -1,0 +1,12 @@
+query SeriesState($id: ID!) {
+  seriesState(id: $id) {
+    id
+    started
+    finished
+    teams {
+      id
+      name
+      score
+    }
+  }
+}

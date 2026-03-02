@@ -19,5 +19,5 @@ jobs:
             cd /var/www/s-tier
             git pull origin main
             docker compose build
-            GRID_API_URL=${{ secrets.GRID_API_URL }} GRID_API_KEY=${{ secrets.GRID_API_KEY }} docker compose up -d
+            GRID_API_KEY=${{ secrets.GRID_API_KEY }} docker compose up -d
             docker image prune -f
