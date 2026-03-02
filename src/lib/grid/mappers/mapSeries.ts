@@ -3,10 +3,10 @@ import type { GridSeries } from "../types/series";
 import type { GridSeriesState } from "../types/seriesState";
 import { mapStatus } from "./mapStatus";
 
-export function mapSeries(
+export const mapSeries = (
   series: GridSeries,
   state: GridSeriesState | null
-): Match {
+): Match => {
   const status = mapStatus(state);
 
   return {

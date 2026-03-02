@@ -1,4 +1,4 @@
-export function buildBatchSeriesStateQuery(seriesIds: string[]): string {
+export const buildBatchSeriesStateQuery = (seriesIds: string[]): string => {
   const fields = seriesIds
     .map(
       (id, i) => `s${i}: seriesState(id: "${id}") {
