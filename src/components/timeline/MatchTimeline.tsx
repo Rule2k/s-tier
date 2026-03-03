@@ -1,7 +1,10 @@
+"use client";
+
+import { useEffect, useRef } from "react";
 import type { Match } from "@/types/match";
 import { MatchCard } from "./MatchCard";
 import { DateSeparator } from "./DateSeparator";
-import { startOfDay } from "date-fns";
+import { isToday, startOfDay } from "date-fns";
 
 const statusOrder: Record<Match["status"], number> = {
   finished: 0,
@@ -29,18 +32,45 @@ const groupByDate = (matches: Match[]): Map<string, Match[]> => {
   return groups;
 };
 
+const findClosestDateKey = (dateKeys: string[]): string | null => {
+  const today = dateKeys.find((key) => isToday(new Date(key)));
+  if (today) return today;
+
+  // Find the closest future date
+  const now = new Date();
+  const future = dateKeys.find((key) => new Date(key) >= startOfDay(now));
+  if (future) return future;
+
+  // Fallback to last date (most recent past)
+  return dateKeys[dateKeys.length - 1] ?? null;
+};
+
 export const MatchTimeline = ({ matches }: { matches: Match[] }) => {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const hasScrolled = useRef(false);
+
   const valid = matches.filter((m) => m.scheduledAt);
   const sorted = sortMatches(valid);
   const grouped = groupByDate(sorted);
+  const dateKeys = Array.from(grouped.keys());
+  const scrollToKey = findClosestDateKey(dateKeys);
+
+  useEffect(() => {
+    if (hasScrolled.current || !scrollRef.current) return;
+    scrollRef.current.scrollIntoView({ block: "start" });
+    hasScrolled.current = true;
+  }, [scrollToKey]);
 
   return (
     <div className="space-y-4">
-      {Array.from(grouped.entries()).map(([dateKey, dateMatches]) => (
-        <div key={dateKey}>
+      {dateKeys.map((dateKey) => (
+        <div
+          key={dateKey}
+          ref={dateKey === scrollToKey ? scrollRef : undefined}
+        >
           <DateSeparator date={new Date(dateKey)} />
           <div className="space-y-2">
-            {dateMatches.map((match) => (
+            {grouped.get(dateKey)!.map((match) => (
               <MatchCard key={match.id} match={match} />
             ))}
           </div>
