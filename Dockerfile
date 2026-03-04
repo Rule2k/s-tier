@@ -1,14 +1,17 @@
+# Stage 1: Install dependencies (shared by builder and worker)
 FROM node:20-alpine AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
 
+# Stage 2: Build Next.js application
 FROM node:20-alpine AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npm run build
 
+# Stage 3: Production Next.js server (standalone output)
 FROM node:20-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
@@ -25,7 +28,8 @@ ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 CMD ["node", "server.js"]
 
-# --- Worker stage ---
+# Stage 4: Background worker (refreshes Redis cache via PandaScore)
+# No build step needed — tsx executes TypeScript directly
 FROM node:20-alpine AS worker
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
