@@ -26,7 +26,7 @@ const config: Record<MatchStatus, { label: string; className: string }> = {
 export const StatusBadge = ({ status }: { status: MatchStatus }) => {
   const { label, className } = config[status];
   return (
-    <span className={`rounded px-2 py-0.5 text-xs font-semibold ${className}`}>
+    <span className={`rounded px-2 py-1 text-xs font-semibold ${className}`}>
       {label}
     </span>
   );
