@@ -1,41 +1,25 @@
 import { NextResponse } from "next/server";
-import { pandascoreGet } from "@/lib/pandascore/client";
-import type { PandaScoreMatch, PandaScoreTournament } from "@/lib/pandascore/types/match";
-import { mapMatch } from "@/lib/pandascore/mappers/mapMatch";
+import redis from "@/lib/redis/client";
+import { CACHE_KEYS, CACHE_TTL } from "@/lib/redis/keys";
+import { fetchMatchesFromPandaScore } from "@/lib/pandascore/fetchMatches";
 
 export async function GET() {
+  // 1. Try Redis cache
   try {
-    // 1. Get S/A-tier tournament IDs
-    const tournaments = await pandascoreGet<PandaScoreTournament[]>(
-      "/csgo/tournaments",
-      { "filter[tier]": "s,a", per_page: "100", sort: "-begin_at" }
-    );
-    const tournamentIds = tournaments.map((t) => t.id).join(",");
+    const cached = await redis.get(CACHE_KEYS.MATCHES);
+    if (cached) return NextResponse.json(JSON.parse(cached));
+  } catch (error) {
+    console.error("Redis read failed, falling back to PandaScore:", error);
+  }
 
-    if (!tournamentIds) {
-      return NextResponse.json([]);
-    }
-
-    // 2. Fetch matches filtered by those tournament IDs
-    const [past, running, upcoming] = await Promise.all([
-      pandascoreGet<PandaScoreMatch[]>("/csgo/matches/past", {
-        "filter[tournament_id]": tournamentIds,
-        per_page: "50",
-      }),
-      pandascoreGet<PandaScoreMatch[]>("/csgo/matches/running", {
-        "filter[tournament_id]": tournamentIds,
-      }),
-      pandascoreGet<PandaScoreMatch[]>("/csgo/matches/upcoming", {
-        "filter[tournament_id]": tournamentIds,
-        per_page: "50",
-      }),
-    ]);
-
-    const matches = [...past, ...running, ...upcoming].map(mapMatch);
-
+  // 2. Fallback: fetch directly from PandaScore
+  try {
+    const matches = await fetchMatchesFromPandaScore();
+    redis.set(CACHE_KEYS.MATCHES, JSON.stringify(matches), "EX", CACHE_TTL)
+      .catch((err) => console.error("Redis write failed:", err));
     return NextResponse.json(matches);
   } catch (error) {
-    console.error("Failed to fetch matches:", error);
+    console.error("PandaScore fallback failed:", error);
     return NextResponse.json(
       { error: "Failed to fetch matches" },
       { status: 500 }
