@@ -24,3 +24,12 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 CMD ["node", "server.js"]
+
+# --- Worker stage ---
+FROM node:20-alpine AS worker
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY src ./src
+COPY worker ./worker
+COPY tsconfig.json ./
+CMD ["npx", "tsx", "worker/refresh.ts"]
