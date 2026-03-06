@@ -1,7 +1,7 @@
 "use client";
 
 import { useMatches } from "@/hooks/useMatches";
-import { MatchTimeline } from "@/components/timeline/MatchTimeline";
+import { TournamentTimeline } from "@/components/tournament/TournamentTimeline";
 import { Spinner } from "@/components/ui/Spinner";
 
 export default function Home() {
@@ -11,5 +11,5 @@ export default function Home() {
   if (error) return <p className="text-red-400">Failed to load matches.</p>;
   if (!matches?.length) return <p className="text-gray-500">No matches found.</p>;
 
-  return <MatchTimeline matches={matches} />;
+  return <TournamentTimeline matches={matches} />;
 }
