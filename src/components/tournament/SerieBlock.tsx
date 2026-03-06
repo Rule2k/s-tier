@@ -59,36 +59,40 @@ export const SerieBlock = ({ serie }: { serie: Serie }) => {
           </button>
         )}
 
-        {serie.stages.map((stage) => {
-          const stageMatches = showFinished
-            ? stage.matches
-            : stage.matches.filter((m) => m.status !== "finished");
+        <div className="flex gap-4 overflow-x-auto">
+          {serie.stages.map((stage) => {
+            const stageMatches = showFinished
+              ? stage.matches
+              : stage.matches.filter((m) => m.status !== "finished");
 
-          if (stageMatches.length === 0) return null;
+            if (stageMatches.length === 0) return null;
 
-          const grouped = groupMatchesByDate(stageMatches);
-          const dateKeys = Array.from(grouped.keys());
+            const grouped = groupMatchesByDate(stageMatches);
+            const dateKeys = Array.from(grouped.keys());
 
-          return (
-            <div key={stage.id}>
-              {showStageHeaders && (
-                <h4 className="mb-3 rounded-md bg-gray-800/50 px-3 py-1.5 text-xs font-semibold text-gray-300 uppercase tracking-wide">
-                  {stage.name || "Main Stage"}
-                </h4>
-              )}
-              {dateKeys.map((dateKey) => (
-                <div key={dateKey}>
-                  <DateSeparator date={new Date(dateKey)} />
-                  <div className="space-y-2.5">
-                    {grouped.get(dateKey)!.map((match) => (
-                      <MatchCard key={match.id} match={match} />
-                    ))}
-                  </div>
+            return (
+              <div key={stage.id} className="min-w-[280px] flex-shrink-0">
+                {showStageHeaders && (
+                  <h4 className="mb-3 rounded-md bg-gray-800/50 px-3 py-1.5 text-xs font-semibold text-gray-300 uppercase tracking-wide">
+                    {stage.name || "Main Stage"}
+                  </h4>
+                )}
+                <div className="flex gap-4 overflow-x-auto">
+                  {dateKeys.map((dateKey) => (
+                    <div key={dateKey} className="min-w-[260px] flex-shrink-0">
+                      <DateSeparator date={new Date(dateKey)} />
+                      <div className="space-y-2.5">
+                        {grouped.get(dateKey)!.map((match) => (
+                          <MatchCard key={match.id} match={match} />
+                        ))}
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          );
-        })}
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
