@@ -2,32 +2,32 @@
 
 import { useEffect, useRef } from "react";
 import type { Serie } from "@/types/match";
-import { buildTimelineColumns } from "@/lib/tournaments/buildTimelineColumns";
+import { buildTimelineRows } from "@/lib/tournaments/buildTimelineRows";
 import { SerieBlock } from "./SerieBlock";
 
 const findScrollTarget = (
-  columns: ReturnType<typeof buildTimelineColumns>,
-): { columnIndex: number; serieId: string } | null => {
+  rows: ReturnType<typeof buildTimelineRows>,
+): { rowIndex: number; serieId: string } | null => {
   // Find first serie with a live match
-  for (let c = 0; c < columns.length; c++) {
-    for (const serie of columns[c].series) {
+  for (let r = 0; r < rows.length; r++) {
+    for (const serie of rows[r].series) {
       if (serie.stages.some((st) => st.matches.some((m) => m.status === "running"))) {
-        return { columnIndex: c, serieId: serie.id };
+        return { rowIndex: r, serieId: serie.id };
       }
     }
   }
 
   // Otherwise, find serie closest to now
   const now = Date.now();
-  let closest: { columnIndex: number; serieId: string; diff: number } | null = null;
+  let closest: { rowIndex: number; serieId: string; diff: number } | null = null;
 
-  for (let c = 0; c < columns.length; c++) {
-    for (const serie of columns[c].series) {
+  for (let r = 0; r < rows.length; r++) {
+    for (const serie of rows[r].series) {
       const begin = new Date(serie.beginAt).getTime();
       const end = new Date(serie.endAt).getTime();
       const diff = now >= begin && now <= end ? 0 : Math.min(Math.abs(now - begin), Math.abs(now - end));
       if (!closest || diff < closest.diff) {
-        closest = { columnIndex: c, serieId: serie.id, diff };
+        closest = { rowIndex: r, serieId: serie.id, diff };
       }
     }
   }
@@ -39,28 +39,41 @@ export const TournamentTimeline = ({ series }: { series: Serie[] }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const hasScrolled = useRef(false);
 
-  const columns = buildTimelineColumns(series);
-  const scrollTarget = findScrollTarget(columns);
+  const rows = buildTimelineRows(series);
+  const scrollTarget = findScrollTarget(rows);
 
   useEffect(() => {
     if (hasScrolled.current || !scrollRef.current) return;
-    scrollRef.current.scrollIntoView?.({ inline: "start", block: "nearest" });
+    scrollRef.current.scrollIntoView?.({ block: "start" });
     hasScrolled.current = true;
   }, []);
 
   return (
-    <div className="flex gap-6 overflow-x-auto snap-x snap-mandatory pb-4">
-      {columns.map((column, columnIndex) => (
-        <div
-          key={column.series.map((s) => s.id).join("-")}
-          ref={scrollTarget?.columnIndex === columnIndex ? scrollRef : undefined}
-          className="min-w-[380px] flex-shrink-0 snap-start flex flex-col gap-4"
-        >
-          {column.series.map((serie) => (
-            <SerieBlock key={serie.id} serie={serie} />
-          ))}
-        </div>
-      ))}
+    <div className="space-y-6">
+      {rows.map((row, rowIndex) => {
+        const isMulti = row.series.length > 1;
+
+        return (
+          <div
+            key={row.series.map((s) => s.id).join("-")}
+            ref={scrollTarget?.rowIndex === rowIndex ? scrollRef : undefined}
+            className={
+              isMulti
+                ? "flex gap-4 overflow-x-auto pb-2 max-md:flex-col max-md:overflow-x-visible"
+                : undefined
+            }
+          >
+            {row.series.map((serie) => (
+              <div
+                key={serie.id}
+                className={isMulti ? "min-w-[350px] flex-shrink-0 max-md:min-w-0 max-md:w-full" : undefined}
+              >
+                <SerieBlock serie={serie} />
+              </div>
+            ))}
+          </div>
+        );
+      })}
     </div>
   );
 };
