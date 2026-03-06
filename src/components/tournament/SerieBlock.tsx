@@ -12,14 +12,30 @@ const tierConfig: Record<string, { label: string; accent: string; glow: string }
   a: { label: "A", accent: "text-purple-400", glow: "shadow-purple-500/10" },
 };
 
+const findDefaultStageIndex = (stages: Serie["stages"]): number => {
+  const stageWithLiveMatch = stages.findIndex((stage) =>
+    stage.matches.some((match) => match.status === "running"),
+  );
+  if (stageWithLiveMatch !== -1) return stageWithLiveMatch;
+
+  const now = Date.now();
+  const stageWithUpcomingMatch = stages.findIndex((stage) =>
+    stage.matches.some(
+      (match) => match.status === "not_started" && new Date(match.scheduledAt).getTime() > now,
+    ),
+  );
+  if (stageWithUpcomingMatch !== -1) return stageWithUpcomingMatch;
+
+  return 0;
+};
+
 export const SerieBlock = ({ serie }: { serie: Serie }) => {
   const allMatches = serie.stages.flatMap((stage) => stage.matches);
-  const [activeStage, setActiveStage] = useState(0);
+  const visibleStages = serie.stages.filter((stage) => stage.matches.length > 0);
+  const [activeStage, setActiveStage] = useState(() => findDefaultStageIndex(visibleStages));
 
   const tierStyle = tierConfig[serie.tier];
   const hasMultipleStages = serie.stages.length > 1;
-
-  const visibleStages = serie.stages.filter((stage) => stage.matches.length > 0);
   const currentStage = visibleStages[activeStage] ?? visibleStages[0];
   const matchesForCurrentStage = currentStage?.matches ?? [];
 
