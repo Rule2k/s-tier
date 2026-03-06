@@ -53,14 +53,26 @@ const cardStyleByStatus: Record<Match["status"], string> = {
   postponed: "border-white/[0.04] bg-white/[0.01]",
 };
 
+const STARTING_SOON_STYLE = "border-blue-400/40 bg-blue-400/[0.04] shadow-[0_0_15px_-3px] shadow-blue-400/10";
+const ONE_HOUR_MS = 60 * 60 * 1000;
+
+const isStartingSoon = (match: Match): boolean => {
+  if (match.status !== "not_started" || !match.scheduledAt) return false;
+  const timeUntilStart = new Date(match.scheduledAt).getTime() - Date.now();
+  return timeUntilStart <= ONE_HOUR_MS;
+};
+
 export const MatchCard = ({ match }: { match: Match }) => {
   const formattedTime = match.scheduledAt
     ? format(new Date(match.scheduledAt), "HH:mm")
     : "--:--";
 
+  const startingSoon = isStartingSoon(match);
+  const cardStyle = startingSoon ? STARTING_SOON_STYLE : cardStyleByStatus[match.status];
+
   return (
     <div
-      className={`flex items-center gap-4 rounded-lg border px-4 py-3 transition-colors ${cardStyleByStatus[match.status]}`}
+      className={`flex items-center gap-4 rounded-lg border px-4 py-3 transition-colors ${cardStyle}`}
     >
       <div className="flex w-16 shrink-0 flex-col items-center gap-1">
         <span className="text-xs text-gray-500">{formattedTime}</span>
