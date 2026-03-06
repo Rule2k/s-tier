@@ -26,13 +26,19 @@ const TeamRow = ({
 const ScoreRow = ({
   team,
   isFinished,
+  isLive,
 }: {
   team: Match["teams"][number];
   isFinished: boolean;
+  isLive: boolean;
 }) => (
   <div
     className={`text-center text-base font-bold ${
-      isFinished && !team.isWinner ? "opacity-40" : "text-white"
+      isLive
+        ? "text-yellow-400"
+        : isFinished && !team.isWinner
+          ? "opacity-40"
+          : "text-white"
     }`}
   >
     {team.score ?? "-"}
@@ -80,6 +86,7 @@ export const MatchCard = ({ match }: { match: Match }) => {
             key={team.name}
             team={team}
             isFinished={match.status === "finished"}
+            isLive={match.status === "running"}
           />
         ))}
       </div>

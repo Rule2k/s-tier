@@ -6,9 +6,9 @@ import { MatchCard } from "@/components/timeline/MatchCard";
 import { DateSeparator } from "@/components/timeline/DateSeparator";
 import { startOfDay, format } from "date-fns";
 
-const tierBadge: Record<string, { label: string; className: string }> = {
-  s: { label: "S", className: "bg-yellow-500/20 text-yellow-400" },
-  a: { label: "A", className: "bg-purple-500/20 text-purple-400" },
+const tierConfig: Record<string, { label: string; badgeClassName: string; headerBg: string; borderColor: string }> = {
+  s: { label: "S", badgeClassName: "bg-yellow-500/20 text-yellow-400", headerBg: "bg-yellow-500/10", borderColor: "border-l-yellow-500" },
+  a: { label: "A", badgeClassName: "bg-purple-500/20 text-purple-400", headerBg: "bg-purple-500/10", borderColor: "border-l-purple-500" },
 };
 
 const groupMatchesByDate = (matches: Match[]) => {
@@ -42,23 +42,23 @@ export const SerieBlock = ({ serie }: { serie: Serie }) => {
   const [showFinished, setShowFinished] = useState(!hasActive);
 
   const showStageHeaders = serie.stages.length > 1;
-  const badge = tierBadge[serie.tier];
+  const tier = tierConfig[serie.tier];
 
   return (
-    <div className="rounded-xl border border-gray-800 bg-gray-950/50 overflow-hidden">
-      <div className="border-b border-gray-800 px-4 py-3">
-        <div className="flex items-center gap-2">
+    <div className={`rounded-xl border border-gray-800 border-l-4 bg-gray-950/50 overflow-hidden shadow-lg shadow-black/20 ${tier?.borderColor ?? "border-l-gray-700"}`}>
+      <div className={`border-b border-gray-800 px-5 py-4 ${tier?.headerBg ?? ""}`}>
+        <div className="flex items-center gap-3">
           {serie.leagueImageUrl && (
-            <img src={serie.leagueImageUrl} alt="" className="h-5 w-5 object-contain" />
+            <img src={serie.leagueImageUrl} alt="" className="h-6 w-6 object-contain" />
           )}
-          <h3 className="text-sm font-bold text-white">{serie.name}</h3>
-          {badge && (
-            <span className={`rounded px-1.5 py-0.5 text-xs font-bold ${badge.className}`}>
-              {badge.label}
+          <h3 className="text-base font-bold text-white">{serie.name}</h3>
+          {tier && (
+            <span className={`rounded px-1.5 py-0.5 text-xs font-bold ${tier.badgeClassName}`}>
+              {tier.label}
             </span>
           )}
         </div>
-        <div className="mt-1 flex items-center gap-2 text-xs text-gray-500">
+        <div className="mt-1.5 flex items-center gap-2 text-xs text-gray-400">
           {serie.region && <span>{serie.region}</span>}
           {serie.beginAt && serie.endAt && (
             <span>{formatDateRange(serie.beginAt, serie.endAt)}</span>
@@ -67,13 +67,14 @@ export const SerieBlock = ({ serie }: { serie: Serie }) => {
         </div>
       </div>
 
-      <div className="p-3 space-y-3">
+      <div className="p-4 space-y-4">
         {hasFinished && hasActive && (
           <button
             type="button"
             onClick={() => setShowFinished((v) => !v)}
-            className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
+            className="flex items-center gap-1.5 rounded-md border border-gray-700 px-2.5 py-1.5 text-xs text-gray-400 hover:text-gray-200 hover:border-gray-600 transition-colors"
           >
+            <span className={`inline-block transition-transform ${showFinished ? "rotate-90" : ""}`}>&#9654;</span>
             {showFinished ? "Hide" : "Show"} {finishedMatches.length} finished match{finishedMatches.length > 1 ? "es" : ""}
           </button>
         )}
@@ -91,14 +92,14 @@ export const SerieBlock = ({ serie }: { serie: Serie }) => {
           return (
             <div key={stage.id}>
               {showStageHeaders && (
-                <h4 className="text-xs font-semibold text-gray-400 mb-2">
+                <h4 className="mb-3 rounded-md bg-gray-800/50 px-3 py-1.5 text-xs font-semibold text-gray-300 uppercase tracking-wide">
                   {stage.name || "Main Stage"}
                 </h4>
               )}
               {dateKeys.map((dateKey) => (
                 <div key={dateKey}>
                   <DateSeparator date={new Date(dateKey)} />
-                  <div className="space-y-2">
+                  <div className="space-y-2.5">
                     {grouped.get(dateKey)!.map((match) => (
                       <MatchCard key={match.id} match={match} />
                     ))}
