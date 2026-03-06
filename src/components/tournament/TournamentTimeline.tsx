@@ -48,32 +48,19 @@ export const TournamentTimeline = ({ series }: { series: Serie[] }) => {
     hasScrolled.current = true;
   }, []);
 
-  return (
-    <div className="space-y-6">
-      {rows.map((row, rowIndex) => {
-        const isMulti = row.series.length > 1;
+  const allSeries = rows.flatMap((row) => row.series);
 
-        return (
-          <div
-            key={row.series.map((s) => s.id).join("-")}
-            ref={scrollTarget?.rowIndex === rowIndex ? scrollRef : undefined}
-            className={
-              isMulti
-                ? "flex gap-4 overflow-x-auto pb-2 max-md:flex-col max-md:overflow-x-visible"
-                : undefined
-            }
-          >
-            {row.series.map((serie) => (
-              <div
-                key={serie.id}
-                className={isMulti ? "min-w-[350px] flex-shrink-0 max-md:min-w-0 max-md:w-full" : undefined}
-              >
-                <SerieBlock serie={serie} />
-              </div>
-            ))}
-          </div>
-        );
-      })}
+  return (
+    <div className="space-y-5">
+      {allSeries.map((serie, i) => (
+        <div
+          key={serie.id}
+          ref={scrollTarget?.serieId === serie.id ? scrollRef : undefined}
+          className=""
+        >
+          <SerieBlock serie={serie} />
+        </div>
+      ))}
     </div>
   );
 };

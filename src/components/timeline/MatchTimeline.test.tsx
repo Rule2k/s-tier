@@ -20,8 +20,8 @@ describe("MatchTimeline", () => {
 
     render(<MatchTimeline matches={matches} />);
 
-    // Date separator should exist (Sunday, June 15)
-    expect(screen.getByText("Sunday, June 15")).toBeInTheDocument();
+    // Date separator should exist (Sun, Jun 15)
+    expect(screen.getByText("Sun, Jun 15")).toBeInTheDocument();
 
     // Team names should be visible
     expect(screen.getByText("Navi")).toBeInTheDocument();
@@ -38,8 +38,8 @@ describe("MatchTimeline", () => {
 
     render(<MatchTimeline matches={matches} />);
 
-    expect(screen.getByText("Sunday, June 15")).toBeInTheDocument();
-    expect(screen.getByText("Monday, June 16")).toBeInTheDocument();
+    expect(screen.getByText("Sun, Jun 15")).toBeInTheDocument();
+    expect(screen.getByText("Mon, Jun 16")).toBeInTheDocument();
   });
 
   it("filters out matches without scheduledAt", () => {
@@ -51,7 +51,7 @@ describe("MatchTimeline", () => {
     render(<MatchTimeline matches={matches} />);
 
     // Only one date group should render
-    expect(screen.getByText("Sunday, June 15")).toBeInTheDocument();
+    expect(screen.getByText("Sun, Jun 15")).toBeInTheDocument();
     expect(screen.getByText("Team Alpha")).toBeInTheDocument();
   });
 });

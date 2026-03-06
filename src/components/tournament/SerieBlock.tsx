@@ -7,9 +7,9 @@ import { DateSeparator } from "@/components/timeline/DateSeparator";
 import { groupMatchesByDate } from "@/lib/matches/groupByDate";
 import { formatDateRange } from "@/lib/matches/formatDateRange";
 
-const tierConfig: Record<string, { label: string; badgeClassName: string; headerBg: string; borderColor: string }> = {
-  s: { label: "S", badgeClassName: "bg-yellow-500/20 text-yellow-400", headerBg: "bg-yellow-500/10", borderColor: "border-l-yellow-500" },
-  a: { label: "A", badgeClassName: "bg-purple-500/20 text-purple-400", headerBg: "bg-purple-500/10", borderColor: "border-l-purple-500" },
+const tierConfig: Record<string, { label: string; accent: string; glow: string }> = {
+  s: { label: "S", accent: "text-yellow-400", glow: "shadow-yellow-500/10" },
+  a: { label: "A", accent: "text-purple-400", glow: "shadow-purple-500/10" },
 };
 
 export const SerieBlock = ({ serie }: { serie: Serie }) => {
@@ -20,75 +20,109 @@ export const SerieBlock = ({ serie }: { serie: Serie }) => {
   const hasActive = activeMatches.length > 0;
 
   const [showFinished, setShowFinished] = useState(!hasActive);
+  const [activeStage, setActiveStage] = useState(0);
 
-  const showStageHeaders = serie.stages.length > 1;
   const tier = tierConfig[serie.tier];
+  const hasMultipleStages = serie.stages.length > 1;
+
+  const visibleStages = serie.stages.filter((stage) => {
+    const stageMatches = showFinished
+      ? stage.matches
+      : stage.matches.filter((m) => m.status !== "finished");
+    return stageMatches.length > 0;
+  });
+
+  const currentStage = visibleStages[activeStage] ?? visibleStages[0];
+
+  const currentMatches = currentStage
+    ? showFinished
+      ? currentStage.matches
+      : currentStage.matches.filter((m) => m.status !== "finished")
+    : [];
+
+  const grouped = groupMatchesByDate(currentMatches);
+  const dateKeys = Array.from(grouped.keys());
 
   return (
-    <div className={`rounded-xl border border-gray-800 border-l-4 bg-gray-950/50 overflow-hidden shadow-lg shadow-black/20 ${tier?.borderColor ?? "border-l-gray-700"}`}>
-      <div className={`border-b border-gray-800 px-5 py-4 ${tier?.headerBg ?? ""}`}>
-        <div className="flex items-center gap-3">
-          {serie.leagueImageUrl && (
-            <img src={serie.leagueImageUrl} alt="" className="h-6 w-6 object-contain" />
-          )}
-          <h3 className="text-base font-bold text-white">{serie.name}</h3>
-          {tier && (
-            <span className={`rounded px-1.5 py-0.5 text-xs font-bold ${tier.badgeClassName}`}>
-              {tier.label}
-            </span>
-          )}
+    <div className={`rounded-2xl border border-white/[0.06] bg-white/[0.03] overflow-clip shadow-lg ${tier?.glow ?? "shadow-black/20"}`}>
+      {/* Sticky glass header + tabs */}
+      <div className="sticky top-[57px] z-10 backdrop-blur-md bg-gray-950/80 border-b border-white/[0.06]">
+        <div className="px-5 py-4 bg-gradient-to-r from-white/[0.06] to-transparent">
+          <div className="flex items-center gap-3">
+            {serie.leagueImageUrl && (
+              <img src={serie.leagueImageUrl} alt="" className="h-7 w-7 rounded-lg object-contain" />
+            )}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-bold text-white truncate">{serie.name}</h3>
+                {tier && (
+                  <span className={`text-[10px] font-black tracking-wider ${tier.accent}`}>
+                    {tier.label}
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-1.5 text-[11px] text-gray-500 mt-0.5">
+                {serie.region && <span>{serie.region}</span>}
+                {serie.region && serie.beginAt && <span>·</span>}
+                {serie.beginAt && serie.endAt && (
+                  <span>{formatDateRange(serie.beginAt, serie.endAt)}</span>
+                )}
+                <span>·</span>
+                <span>{allMatches.length} match{allMatches.length > 1 ? "es" : ""}</span>
+              </div>
+            </div>
+          </div>
         </div>
-        <div className="mt-1.5 flex items-center gap-2 text-xs text-gray-400">
-          {serie.region && <span>{serie.region}</span>}
-          {serie.beginAt && serie.endAt && (
-            <span>{formatDateRange(serie.beginAt, serie.endAt)}</span>
-          )}
-          <span>{allMatches.length} match{allMatches.length > 1 ? "es" : ""}</span>
-        </div>
+
+        {hasMultipleStages && visibleStages.length > 1 && (
+          <div className="flex gap-1 px-4 border-t border-white/[0.04]">
+            {visibleStages.map((stage, i) => (
+              <button
+                key={stage.id}
+                type="button"
+                onClick={() => setActiveStage(i)}
+                className={`px-3 py-2 text-xs font-medium transition-colors relative ${
+                  i === activeStage
+                    ? "text-white"
+                    : "text-gray-500 hover:text-gray-300"
+                }`}
+              >
+                {stage.name || "Main Stage"}
+                {i === activeStage && (
+                  <span className="absolute bottom-0 left-1 right-1 h-0.5 rounded-full bg-white/60" />
+                )}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
-      <div className="p-4 space-y-4">
+      {/* Content */}
+      <div className="p-4">
         {hasFinished && hasActive && (
           <button
             type="button"
             onClick={() => setShowFinished((v) => !v)}
-            className="flex items-center gap-1.5 rounded-md border border-gray-700 px-2.5 py-1.5 text-xs text-gray-400 hover:text-gray-200 hover:border-gray-600 transition-colors"
+            className="mb-3 flex items-center gap-1.5 rounded-full border border-white/[0.08] bg-white/[0.03] px-3 py-1 text-[11px] text-gray-400 hover:text-gray-200 hover:border-white/[0.15] transition-colors"
           >
-            <span className={`inline-block transition-transform ${showFinished ? "rotate-90" : ""}`}>&#9654;</span>
+            <span className={`inline-block text-[8px] transition-transform ${showFinished ? "rotate-90" : ""}`}>&#9654;</span>
             {showFinished ? "Hide" : "Show"} {finishedMatches.length} finished match{finishedMatches.length > 1 ? "es" : ""}
           </button>
         )}
 
-        {serie.stages.map((stage) => {
-          const stageMatches = showFinished
-            ? stage.matches
-            : stage.matches.filter((m) => m.status !== "finished");
-
-          if (stageMatches.length === 0) return null;
-
-          const grouped = groupMatchesByDate(stageMatches);
-          const dateKeys = Array.from(grouped.keys());
-
-          return (
-            <div key={stage.id}>
-              {showStageHeaders && (
-                <h4 className="mb-3 rounded-md bg-gray-800/50 px-3 py-1.5 text-xs font-semibold text-gray-300 uppercase tracking-wide">
-                  {stage.name || "Main Stage"}
-                </h4>
-              )}
-              {dateKeys.map((dateKey) => (
-                <div key={dateKey}>
-                  <DateSeparator date={new Date(dateKey)} />
-                  <div className="space-y-2.5">
-                    {grouped.get(dateKey)!.map((match) => (
-                      <MatchCard key={match.id} match={match} />
-                    ))}
-                  </div>
-                </div>
-              ))}
+        {/* Day timeline */}
+        <div className="space-y-0">
+          {dateKeys.map((dateKey, i) => (
+            <div key={dateKey}>
+              <DateSeparator date={new Date(dateKey)} isLast={i === dateKeys.length - 1} />
+              <div className="space-y-2 pl-5 pb-4">
+                {grouped.get(dateKey)!.map((match) => (
+                  <MatchCard key={match.id} match={match} />
+                ))}
+              </div>
             </div>
-          );
-        })}
+          ))}
+        </div>
       </div>
     </div>
   );

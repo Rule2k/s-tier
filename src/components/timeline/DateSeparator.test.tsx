@@ -22,7 +22,7 @@ describe("DateSeparator", () => {
     // Use a fixed date far enough from today
     const date = new Date("2024-03-15T12:00:00Z");
     render(<DateSeparator date={date} />);
-    // format: "EEEE, MMMM d" → e.g. "Friday, March 15"
-    expect(screen.getByText("Friday, March 15")).toBeInTheDocument();
+    // format: "EEE, MMM d" → e.g. "Fri, Mar 15"
+    expect(screen.getByText("Fri, Mar 15")).toBeInTheDocument();
   });
 });
