@@ -77,9 +77,9 @@ export const SerieBlock = ({
   const dateKeys = Array.from(matchesByDate.keys());
 
   return (
-    <div className={`rounded-2xl border border-white/[0.06] bg-white/[0.03] overflow-clip shadow-lg ${tierStyle?.glow ?? "shadow-black/20"}`}>
+    <div data-serie-block className={`rounded-2xl border border-white/[0.06] bg-white/[0.03] overflow-clip shadow-lg ${tierStyle?.glow ?? "shadow-black/20"}`}>
       {/* Sticky glass header + tabs */}
-      <div className="sticky top-[57px] z-10 backdrop-blur-md bg-gray-950/80 border-b border-white/[0.06]">
+      <div data-serie-header className="sticky top-[57px] z-10 backdrop-blur-md bg-gray-950/80 border-b border-white/[0.06]">
         <div className="px-5 py-4 bg-gradient-to-r from-white/[0.06] to-transparent">
           <div className="flex items-center gap-3">
             {serie.leagueImageUrl && (

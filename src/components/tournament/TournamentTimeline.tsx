@@ -39,7 +39,14 @@ export const TournamentTimeline = ({ series }: { series: Serie[] }) => {
 
   useEffect(() => {
     if (hasScrolled.current || !scrollRef.current) return;
-    scrollRef.current.scrollIntoView?.({ block: "center" });
+    const el = scrollRef.current;
+    const siteHeader = document.querySelector("header");
+    const serieHeader = el.closest("[data-serie-block]")?.querySelector("[data-serie-header]");
+    const siteHeaderHeight = siteHeader?.getBoundingClientRect().height ?? 57;
+    const serieHeaderHeight = serieHeader?.getBoundingClientRect().height ?? 0;
+    const offset = siteHeaderHeight + serieHeaderHeight + 8;
+    const top = el.getBoundingClientRect().top + window.scrollY - offset;
+    window.scrollTo({ top, behavior: "smooth" });
     hasScrolled.current = true;
   }, []);
 
