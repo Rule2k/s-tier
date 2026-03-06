@@ -10,6 +10,8 @@ export const mapMatch = (match: PandaScoreMatch): Match => ({
     id: String(match.tournament.id),
     name: match.tournament.name,
     tier: match.tournament.tier,
+    slug: match.tournament.slug,
+    region: match.tournament.region,
   },
   teams: match.opponents.map((o) => {
     const result = match.results.find((r) => r.team_id === o.opponent.id);

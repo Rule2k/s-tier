@@ -56,6 +56,8 @@ export const makeMatch = (overrides: Partial<Match> = {}): Match => ({
     id: "100",
     name: "BLAST Premier Spring Finals 2025",
     tier: "s",
+    slug: "blast-premier-spring-finals-2025",
+    region: "EU",
   },
   teams: [
     { name: "Team Alpha", acronym: "TA", imageUrl: "https://img.pandascore.co/team-alpha.png", score: 2, isWinner: true },

@@ -34,6 +34,8 @@ describe("mapMatch", () => {
       id: "100",
       name: "BLAST Premier Spring Finals 2025",
       tier: "s",
+      slug: "blast-premier-spring-finals-2025",
+      region: "EU",
     });
   });
 

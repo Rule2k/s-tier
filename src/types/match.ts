@@ -9,6 +9,8 @@ export interface Match {
     id: string;
     name: string;
     tier: string;
+    slug: string;
+    region: string | null;
   };
   teams: {
     name: string;
