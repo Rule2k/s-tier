@@ -16,13 +16,15 @@ describe("StatusBadge", () => {
     expect(screen.getByText(label)).toBeInTheDocument();
   });
 
-  it("applies animate-pulse class for running status", () => {
-    render(<StatusBadge status="running" />);
-    expect(screen.getByText("LIVE")).toHaveClass("animate-pulse");
+  it("applies animate-pulse to the dot for running status", () => {
+    const { container } = render(<StatusBadge status="running" />);
+    const dot = container.querySelector(".rounded-full");
+    expect(dot).toHaveClass("animate-pulse");
   });
 
-  it("does not apply animate-pulse for non-running statuses", () => {
-    render(<StatusBadge status="finished" />);
-    expect(screen.getByText("FINISHED")).not.toHaveClass("animate-pulse");
+  it("does not apply animate-pulse to the dot for non-running statuses", () => {
+    const { container } = render(<StatusBadge status="finished" />);
+    const dot = container.querySelector(".rounded-full");
+    expect(dot).not.toHaveClass("animate-pulse");
   });
 });

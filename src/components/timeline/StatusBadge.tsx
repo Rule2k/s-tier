@@ -1,32 +1,43 @@
 import type { MatchStatus } from "@/types/match";
 
-const statusStyles: Record<MatchStatus, { label: string; className: string }> = {
+const statusStyles: Record<MatchStatus, { label: string; dotColor: string; textColor: string; pulse: boolean }> = {
   running: {
     label: "LIVE",
-    className: "bg-red-500/20 text-red-400 animate-pulse",
+    dotColor: "bg-red-500",
+    textColor: "text-red-400",
+    pulse: true,
   },
   not_started: {
     label: "UPCOMING",
-    className: "bg-blue-500/20 text-blue-400",
+    dotColor: "bg-blue-400",
+    textColor: "text-gray-500",
+    pulse: false,
   },
   finished: {
     label: "FINISHED",
-    className: "bg-gray-500/10 text-gray-500",
+    dotColor: "bg-gray-600",
+    textColor: "text-gray-600",
+    pulse: false,
   },
   canceled: {
     label: "CANCELED",
-    className: "bg-gray-500/20 text-gray-400",
+    dotColor: "bg-gray-600",
+    textColor: "text-gray-600",
+    pulse: false,
   },
   postponed: {
     label: "POSTPONED",
-    className: "bg-yellow-500/20 text-yellow-400",
+    dotColor: "bg-yellow-500",
+    textColor: "text-yellow-500/70",
+    pulse: false,
   },
 };
 
 export const StatusBadge = ({ status }: { status: MatchStatus }) => {
-  const { label, className } = statusStyles[status];
+  const { label, dotColor, textColor, pulse } = statusStyles[status];
   return (
-    <span className={`rounded px-2 py-1 text-xs font-semibold ${className}`}>
+    <span className={`flex items-center gap-1.5 text-[10px] font-semibold tracking-wide ${textColor}`}>
+      <span className={`h-1.5 w-1.5 rounded-full ${dotColor} ${pulse ? "animate-pulse" : ""}`} />
       {label}
     </span>
   );

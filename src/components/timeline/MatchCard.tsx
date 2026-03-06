@@ -45,12 +45,12 @@ const ScoreRow = ({
   </div>
 );
 
-const borderColorByStatus: Record<Match["status"], string> = {
-  running: "border-l-red-500",
-  not_started: "border-l-gray-700",
-  finished: "border-l-gray-700",
-  canceled: "border-l-gray-700",
-  postponed: "border-l-gray-700",
+const cardStyleByStatus: Record<Match["status"], string> = {
+  running: "border-red-500/40 bg-red-500/[0.04] shadow-[0_0_15px_-3px] shadow-red-500/10",
+  not_started: "border-white/[0.06] bg-white/[0.02]",
+  finished: "border-white/[0.04] bg-white/[0.01]",
+  canceled: "border-white/[0.04] bg-white/[0.01]",
+  postponed: "border-white/[0.04] bg-white/[0.01]",
 };
 
 export const MatchCard = ({ match }: { match: Match }) => {
@@ -60,7 +60,7 @@ export const MatchCard = ({ match }: { match: Match }) => {
 
   return (
     <div
-      className={`flex items-center gap-4 rounded-lg border border-gray-800 border-l-2 bg-gray-900/60 px-4 py-3 ${borderColorByStatus[match.status]}`}
+      className={`flex items-center gap-4 rounded-lg border px-4 py-3 transition-colors ${cardStyleByStatus[match.status]}`}
     >
       <div className="flex w-16 shrink-0 flex-col items-center gap-1">
         <span className="text-xs text-gray-500">{formattedTime}</span>
