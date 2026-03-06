@@ -62,7 +62,7 @@ test("displays matches with team names and status badges", async ({ page }) => {
   await expect(page.getByText("FaZe Clan")).toBeVisible();
   await expect(page.getByText("Vitality")).toBeVisible();
 
-  await expect(page.getByText("LIVE")).toBeVisible();
+  await expect(page.getByText("LIVE", { exact: true })).toBeVisible();
   await expect(page.getByText("UPCOMING")).toBeVisible();
 });
 
