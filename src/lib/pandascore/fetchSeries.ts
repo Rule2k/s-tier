@@ -1,5 +1,6 @@
 import { pandascoreGet } from "./client";
 import { mapMatch } from "./mappers/mapMatch";
+import { VALID_TIERS } from "./config";
 import type { PandaScoreMatch, PandaScoreSerie } from "./types/match";
 import type { Match, Serie, Stage } from "@/types/match";
 
@@ -10,7 +11,7 @@ export const fetchSeriesFromPandaScore = async (): Promise<Serie[]> => {
   });
 
   const filteredSeries = pandaSeries.filter((s) =>
-    s.tournaments.some((t) => t.tier === "s" || t.tier === "a"),
+    s.tournaments.some((t) => (VALID_TIERS as readonly string[]).includes(t.tier)),
   );
 
   const tournamentIds = filteredSeries

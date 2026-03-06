@@ -1,35 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import type { Serie, Match } from "@/types/match";
+import type { Serie } from "@/types/match";
 import { MatchCard } from "@/components/timeline/MatchCard";
 import { DateSeparator } from "@/components/timeline/DateSeparator";
-import { startOfDay, format } from "date-fns";
+import { groupMatchesByDate } from "@/lib/matches/groupByDate";
+import { formatDateRange } from "@/lib/matches/formatDateRange";
 
 const tierConfig: Record<string, { label: string; badgeClassName: string; headerBg: string; borderColor: string }> = {
   s: { label: "S", badgeClassName: "bg-yellow-500/20 text-yellow-400", headerBg: "bg-yellow-500/10", borderColor: "border-l-yellow-500" },
   a: { label: "A", badgeClassName: "bg-purple-500/20 text-purple-400", headerBg: "bg-purple-500/10", borderColor: "border-l-purple-500" },
-};
-
-const groupMatchesByDate = (matches: Match[]) => {
-  
-  const groups = new Map<string, Match[]>();
-  for (const match of matches) {
-    const key = startOfDay(new Date(match.scheduledAt)).toISOString();
-    const group = groups.get(key) ?? [];
-    group.push(match);
-    groups.set(key, group);
-  }
-  return groups;
-};
-
-const formatDateRange = (beginAt: string, endAt: string): string => {
-  const start = new Date(beginAt);
-  const end = new Date(endAt);
-  if (startOfDay(start).getTime() === startOfDay(end).getTime()) {
-    return format(start, "MMM d");
-  }
-  return `${format(start, "MMM d")} - ${format(end, "MMM d")}`;
 };
 
 export const SerieBlock = ({ serie }: { serie: Serie }) => {

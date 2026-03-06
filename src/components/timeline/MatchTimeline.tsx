@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import type { Match } from "@/types/match";
 import { MatchCard } from "./MatchCard";
 import { DateSeparator } from "./DateSeparator";
+import { groupMatchesByDate } from "@/lib/matches/groupByDate";
 import { isToday, startOfDay } from "date-fns";
 
 const statusOrder: Record<Match["status"], number> = {
@@ -20,17 +21,6 @@ const sortMatches = (matches: Match[]): Match[] =>
     if (statusDiff !== 0) return statusDiff;
     return new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime();
   });
-
-const groupByDate = (matches: Match[]): Map<string, Match[]> => {
-  const groups = new Map<string, Match[]>();
-  for (const match of matches) {
-    const key = startOfDay(new Date(match.scheduledAt)).toISOString();
-    const group = groups.get(key) ?? [];
-    group.push(match);
-    groups.set(key, group);
-  }
-  return groups;
-};
 
 const findClosestDateKey = (dateKeys: string[]): string | null => {
   const today = dateKeys.find((key) => isToday(new Date(key)));
@@ -51,7 +41,7 @@ export const MatchTimeline = ({ matches }: { matches: Match[] }) => {
 
   const valid = matches.filter((m) => m.scheduledAt);
   const sorted = sortMatches(valid);
-  const grouped = groupByDate(sorted);
+  const grouped = groupMatchesByDate(sorted);
   const dateKeys = Array.from(grouped.keys());
   const scrollToKey = findClosestDateKey(dateKeys);
 
