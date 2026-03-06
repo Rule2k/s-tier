@@ -14,31 +14,14 @@ const tierConfig: Record<string, { label: string; accent: string; glow: string }
 
 export const SerieBlock = ({ serie }: { serie: Serie }) => {
   const allMatches = serie.stages.flatMap((stage) => stage.matches);
-  const finishedMatches = allMatches.filter((match) => match.status === "finished");
-  const activeMatches = allMatches.filter((match) => match.status !== "finished");
-  const hasFinishedMatches = finishedMatches.length > 0;
-  const hasActiveMatches = activeMatches.length > 0;
-
-  const [showFinished, setShowFinished] = useState(!hasActiveMatches);
   const [activeStage, setActiveStage] = useState(0);
 
   const tierStyle = tierConfig[serie.tier];
   const hasMultipleStages = serie.stages.length > 1;
 
-  const visibleStages = serie.stages.filter((stage) => {
-    const matchesInStage = showFinished
-      ? stage.matches
-      : stage.matches.filter((match) => match.status !== "finished");
-    return matchesInStage.length > 0;
-  });
-
+  const visibleStages = serie.stages.filter((stage) => stage.matches.length > 0);
   const currentStage = visibleStages[activeStage] ?? visibleStages[0];
-
-  const matchesForCurrentStage = currentStage
-    ? showFinished
-      ? currentStage.matches
-      : currentStage.matches.filter((match) => match.status !== "finished")
-    : [];
+  const matchesForCurrentStage = currentStage?.matches ?? [];
 
   const matchesByDate = groupMatchesByDate(matchesForCurrentStage);
   const dateKeys = Array.from(matchesByDate.keys());
@@ -99,18 +82,6 @@ export const SerieBlock = ({ serie }: { serie: Serie }) => {
 
       {/* Content */}
       <div className="p-4">
-        {hasFinishedMatches && hasActiveMatches && (
-          <button
-            type="button"
-            onClick={() => setShowFinished((isVisible) => !isVisible)}
-            className="mb-3 flex items-center gap-1.5 rounded-full border border-white/[0.08] bg-white/[0.03] px-3 py-1 text-[11px] text-gray-400 hover:text-gray-200 hover:border-white/[0.15] transition-colors"
-          >
-            <span className={`inline-block text-[8px] transition-transform ${showFinished ? "rotate-90" : ""}`}>&#9654;</span>
-            {showFinished ? "Hide" : "Show"} {finishedMatches.length} finished match{finishedMatches.length > 1 ? "es" : ""}
-          </button>
-        )}
-
-        {/* Day timeline */}
         <div className="space-y-0">
           {dateKeys.map((dateKey, i) => (
             <div key={dateKey}>

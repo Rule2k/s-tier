@@ -1,5 +1,4 @@
 import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import { SerieBlock } from "./SerieBlock";
 import { makeSerie, makeStage, makeMatch } from "@/test/fixtures/matches";
 
@@ -42,7 +41,7 @@ describe("SerieBlock", () => {
     expect(screen.queryByText("Group Stage")).not.toBeInTheDocument();
   });
 
-  it("hides finished matches by default when active matches exist", () => {
+  it("renders all matches including finished ones", () => {
     const serie = makeSerie({
       stages: [
         makeStage({
@@ -53,42 +52,9 @@ describe("SerieBlock", () => {
         }),
       ],
     });
-    render(<SerieBlock serie={serie} />);
-    expect(screen.getByText(/Show 1 finished match$/)).toBeInTheDocument();
-  });
-
-  it("shows all matches when only finished matches exist", () => {
-    const serie = makeSerie({
-      stages: [
-        makeStage({
-          matches: [
-            makeMatch({ id: "1", status: "finished" }),
-            makeMatch({ id: "2", status: "finished" }),
-          ],
-        }),
-      ],
-    });
-    render(<SerieBlock serie={serie} />);
-    expect(screen.queryByText(/Show.*finished/)).not.toBeInTheDocument();
-  });
-
-  it("toggles finished matches visibility", async () => {
-    const user = userEvent.setup();
-    const serie = makeSerie({
-      stages: [
-        makeStage({
-          matches: [
-            makeMatch({ id: "1", status: "finished" }),
-            makeMatch({ id: "2", status: "running" }),
-          ],
-        }),
-      ],
-    });
-    render(<SerieBlock serie={serie} />);
-
-    const btn = screen.getByText(/Show 1 finished match$/);
-    await user.click(btn);
-    expect(screen.getByText(/Hide 1 finished match$/)).toBeInTheDocument();
+    const { container } = render(<SerieBlock serie={serie} />);
+    expect(screen.getByText("2 matches")).toBeInTheDocument();
+    expect(container.querySelectorAll(".rounded-lg.border")).toHaveLength(2);
   });
 
   it("uses 'Main Stage' for stages with empty name", () => {
