@@ -39,7 +39,7 @@ describe("fetchSeriesFromPandaScore", () => {
 
     expect(pandascoreGet).toHaveBeenCalledWith(
       "/csgo/series",
-      expect.objectContaining({ per_page: "50", sort: "-begin_at" }),
+      expect.objectContaining({ per_page: "100", sort: "-begin_at" }),
     );
     expect(pandascoreGet).toHaveBeenCalledWith(
       "/csgo/matches/past",
@@ -47,27 +47,29 @@ describe("fetchSeriesFromPandaScore", () => {
     );
   });
 
-  it("filters out series with no s/a tier tournaments", async () => {
+  it("includes series of all tiers", async () => {
     const series = [
-      makePandaScoreSerie({ id: 1, tournaments: [makeTournament({ tier: "b" })] }),
-      makePandaScoreSerie({ id: 2, tournaments: [makeTournament({ tier: "a" })] }),
+      makePandaScoreSerie({ id: 1, tournaments: [makeTournament({ id: 100, tier: "b" })] }),
+      makePandaScoreSerie({ id: 2, tournaments: [makeTournament({ id: 200, tier: "a" })] }),
     ];
+
+    const match1 = makePandaScoreMatch({ id: 1, tournament: { ...makeTournament({ id: 100, tier: "b" }) } });
+    const match2 = makePandaScoreMatch({ id: 2, tournament: { ...makeTournament({ id: 200, tier: "a" }) } });
 
     vi.mocked(pandascoreGet)
       .mockResolvedValueOnce(series)
-      .mockResolvedValueOnce([makePandaScoreMatch()])
+      .mockResolvedValueOnce([match1, match2])
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([]);
 
     const result = await fetchSeriesFromPandaScore();
 
-    // Only the serie with tier "a" tournament should produce results
-    // Tournament IDs should only include those from filtered series
     expect(pandascoreGet).toHaveBeenCalledWith(
       "/csgo/matches/past",
-      expect.objectContaining({ "filter[tournament_id]": "100" }),
+      expect.objectContaining({ "filter[tournament_id]": "100,200" }),
     );
-    expect(result.length).toBeLessThanOrEqual(1);
+    expect(result).toHaveLength(2);
+    expect(result.map((s) => s.tier)).toEqual(expect.arrayContaining(["b", "a"]));
   });
 
   it("dispatches matches into correct stages", async () => {
@@ -94,15 +96,19 @@ describe("fetchSeriesFromPandaScore", () => {
     expect(result[0].stages[1].matches).toHaveLength(1);
   });
 
-  it("returns empty array when no series have s/a tournaments", async () => {
+  it("assigns correct tier based on priority", async () => {
     const series = [makePandaScoreSerie({ tournaments: [makeTournament({ tier: "c" })] })];
 
-    vi.mocked(pandascoreGet).mockResolvedValueOnce(series);
+    vi.mocked(pandascoreGet)
+      .mockResolvedValueOnce(series)
+      .mockResolvedValueOnce([makePandaScoreMatch()])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([]);
 
     const result = await fetchSeriesFromPandaScore();
 
-    expect(result).toEqual([]);
-    expect(pandascoreGet).toHaveBeenCalledTimes(1);
+    expect(result).toHaveLength(1);
+    expect(result[0].tier).toBe("c");
   });
 
   it("excludes series where all stages have zero matches", async () => {

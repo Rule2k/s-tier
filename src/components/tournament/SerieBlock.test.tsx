@@ -15,10 +15,9 @@ describe("SerieBlock", () => {
     expect(leagueImg).toBeInTheDocument();
   });
 
-  it("renders date range and match count", () => {
+  it("renders date range", () => {
     render(<SerieBlock serie={makeSerie({ beginAt: "2025-06-01T00:00:00Z", endAt: "2025-06-15T00:00:00Z" })} />);
     expect(screen.getByText("Jun 1 - Jun 15")).toBeInTheDocument();
-    expect(screen.getByText("1 match")).toBeInTheDocument();
   });
 
   it("shows stage headers when 2+ stages", () => {
@@ -33,12 +32,12 @@ describe("SerieBlock", () => {
     expect(screen.getByText("Playoffs")).toBeInTheDocument();
   });
 
-  it("does not show stage header when only 1 stage", () => {
+  it("shows stage tab even with 1 stage", () => {
     const serie = makeSerie({
       stages: [makeStage({ name: "Group Stage" })],
     });
     render(<SerieBlock serie={serie} />);
-    expect(screen.queryByText("Group Stage")).not.toBeInTheDocument();
+    expect(screen.getByText("Group Stage")).toBeInTheDocument();
   });
 
   it("renders all matches including finished ones", () => {
@@ -53,7 +52,6 @@ describe("SerieBlock", () => {
       ],
     });
     const { container } = render(<SerieBlock serie={serie} />);
-    expect(screen.getByText("2 matches")).toBeInTheDocument();
     expect(container.querySelectorAll(".rounded-lg.border")).toHaveLength(2);
   });
 

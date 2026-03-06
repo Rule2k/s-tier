@@ -26,7 +26,7 @@ const findDefaultStageIndex = (stages: Serie["stages"]): number => {
   );
   if (stageWithUpcomingMatch !== -1) return stageWithUpcomingMatch;
 
-  return 0;
+  return stages.length - 1;
 };
 
 export const SerieBlock = ({
@@ -38,12 +38,10 @@ export const SerieBlock = ({
   scrollTargetMatchId?: string | null;
   scrollRef?: RefObject<HTMLDivElement | null>;
 }) => {
-  const allMatches = serie.stages.flatMap((stage) => stage.matches);
   const visibleStages = serie.stages.filter((stage) => stage.matches.length > 0);
   const [activeStage, setActiveStage] = useState(() => findDefaultStageIndex(visibleStages));
 
   const tierStyle = tierConfig[serie.tier];
-  const hasMultipleStages = serie.stages.length > 1;
   const currentStage = visibleStages[activeStage] ?? visibleStages[0];
   const matchesForCurrentStage = currentStage?.matches ?? [];
 
@@ -69,19 +67,14 @@ export const SerieBlock = ({
                 )}
               </div>
               <div className="flex items-center gap-1.5 text-[11px] text-gray-500 mt-0.5">
-                {serie.region && <span>{serie.region}</span>}
-                {serie.region && serie.beginAt && <span>·</span>}
                 {serie.beginAt && serie.endAt && (
                   <span>{formatDateRange(serie.beginAt, serie.endAt)}</span>
                 )}
-                <span>·</span>
-                <span>{allMatches.length} match{allMatches.length > 1 ? "es" : ""}</span>
               </div>
             </div>
           </div>
         </div>
-
-        {hasMultipleStages && visibleStages.length > 1 && (
+        {visibleStages.length && (
           <div className="flex gap-1 px-4 border-t border-white/[0.04]">
             {visibleStages.map((stage, i) => (
               <button
