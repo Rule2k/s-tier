@@ -1,5 +1,5 @@
-import type { PandaScoreMatch, PandaScoreTeam, PandaScoreTournament } from "@/lib/pandascore/types/match";
-import type { Match } from "@/types/match";
+import type { PandaScoreMatch, PandaScoreTeam, PandaScoreTournament, PandaScoreSerie, PandaScoreLeague } from "@/lib/pandascore/types/match";
+import type { Match, Stage, Serie } from "@/types/match";
 
 const defaultTeam: PandaScoreTeam = {
   id: 1,
@@ -63,5 +63,48 @@ export const makeMatch = (overrides: Partial<Match> = {}): Match => ({
     { name: "Team Alpha", acronym: "TA", imageUrl: "https://img.pandascore.co/team-alpha.png", score: 2, isWinner: true },
     { name: "Team Bravo", acronym: "TB", imageUrl: "https://img.pandascore.co/team-bravo.png", score: 1, isWinner: false },
   ],
+  ...overrides,
+});
+
+const defaultLeague: PandaScoreLeague = {
+  id: 10,
+  name: "BLAST Premier",
+  slug: "blast-premier",
+  image_url: "https://img.pandascore.co/blast-premier.png",
+};
+
+export const makePandaScoreSerie = (
+  overrides: Partial<PandaScoreSerie> = {},
+): PandaScoreSerie => ({
+  id: 50,
+  name: "Spring",
+  full_name: "Spring 2025",
+  season: "Spring",
+  year: 2025,
+  begin_at: "2025-06-01T00:00:00Z",
+  end_at: "2025-06-30T23:59:59Z",
+  league_id: 10,
+  slug: "blast-premier-spring-2025",
+  league: { ...defaultLeague },
+  tournaments: [{ ...defaultTournament }],
+  ...overrides,
+});
+
+export const makeStage = (overrides: Partial<Stage> = {}): Stage => ({
+  id: "100",
+  name: "Group Stage",
+  matches: [makeMatch()],
+  ...overrides,
+});
+
+export const makeSerie = (overrides: Partial<Serie> = {}): Serie => ({
+  id: "50",
+  name: "BLAST Premier Spring 2025",
+  leagueImageUrl: "https://img.pandascore.co/blast-premier.png",
+  tier: "s",
+  region: "EU",
+  beginAt: "2025-06-01T00:00:00Z",
+  endAt: "2025-06-30T23:59:59Z",
+  stages: [makeStage()],
   ...overrides,
 });

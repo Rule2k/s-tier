@@ -20,3 +20,20 @@ export interface Match {
     isWinner: boolean;
   }[];
 }
+
+export interface Stage {
+  id: string;
+  name: string;
+  matches: Match[];
+}
+
+export interface Serie {
+  id: string;
+  name: string;
+  leagueImageUrl: string | null;
+  tier: string;
+  region: string | null;
+  beginAt: string;
+  endAt: string;
+  stages: Stage[];
+}
