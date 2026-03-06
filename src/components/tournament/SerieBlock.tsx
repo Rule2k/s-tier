@@ -13,38 +13,38 @@ const tierConfig: Record<string, { label: string; accent: string; glow: string }
 };
 
 export const SerieBlock = ({ serie }: { serie: Serie }) => {
-  const allMatches = serie.stages.flatMap((s) => s.matches);
-  const finishedMatches = allMatches.filter((m) => m.status === "finished");
-  const activeMatches = allMatches.filter((m) => m.status !== "finished");
-  const hasFinished = finishedMatches.length > 0;
-  const hasActive = activeMatches.length > 0;
+  const allMatches = serie.stages.flatMap((stage) => stage.matches);
+  const finishedMatches = allMatches.filter((match) => match.status === "finished");
+  const activeMatches = allMatches.filter((match) => match.status !== "finished");
+  const hasFinishedMatches = finishedMatches.length > 0;
+  const hasActiveMatches = activeMatches.length > 0;
 
-  const [showFinished, setShowFinished] = useState(!hasActive);
+  const [showFinished, setShowFinished] = useState(!hasActiveMatches);
   const [activeStage, setActiveStage] = useState(0);
 
-  const tier = tierConfig[serie.tier];
+  const tierStyle = tierConfig[serie.tier];
   const hasMultipleStages = serie.stages.length > 1;
 
   const visibleStages = serie.stages.filter((stage) => {
-    const stageMatches = showFinished
+    const matchesInStage = showFinished
       ? stage.matches
-      : stage.matches.filter((m) => m.status !== "finished");
-    return stageMatches.length > 0;
+      : stage.matches.filter((match) => match.status !== "finished");
+    return matchesInStage.length > 0;
   });
 
   const currentStage = visibleStages[activeStage] ?? visibleStages[0];
 
-  const currentMatches = currentStage
+  const matchesForCurrentStage = currentStage
     ? showFinished
       ? currentStage.matches
-      : currentStage.matches.filter((m) => m.status !== "finished")
+      : currentStage.matches.filter((match) => match.status !== "finished")
     : [];
 
-  const grouped = groupMatchesByDate(currentMatches);
-  const dateKeys = Array.from(grouped.keys());
+  const matchesByDate = groupMatchesByDate(matchesForCurrentStage);
+  const dateKeys = Array.from(matchesByDate.keys());
 
   return (
-    <div className={`rounded-2xl border border-white/[0.06] bg-white/[0.03] overflow-clip shadow-lg ${tier?.glow ?? "shadow-black/20"}`}>
+    <div className={`rounded-2xl border border-white/[0.06] bg-white/[0.03] overflow-clip shadow-lg ${tierStyle?.glow ?? "shadow-black/20"}`}>
       {/* Sticky glass header + tabs */}
       <div className="sticky top-[57px] z-10 backdrop-blur-md bg-gray-950/80 border-b border-white/[0.06]">
         <div className="px-5 py-4 bg-gradient-to-r from-white/[0.06] to-transparent">
@@ -55,9 +55,9 @@ export const SerieBlock = ({ serie }: { serie: Serie }) => {
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
                 <h3 className="text-sm font-bold text-white truncate">{serie.name}</h3>
-                {tier && (
-                  <span className={`text-[10px] font-black tracking-wider ${tier.accent}`}>
-                    {tier.label}
+                {tierStyle && (
+                  <span className={`text-[10px] font-black tracking-wider ${tierStyle.accent}`}>
+                    {tierStyle.label}
                   </span>
                 )}
               </div>
@@ -99,10 +99,10 @@ export const SerieBlock = ({ serie }: { serie: Serie }) => {
 
       {/* Content */}
       <div className="p-4">
-        {hasFinished && hasActive && (
+        {hasFinishedMatches && hasActiveMatches && (
           <button
             type="button"
-            onClick={() => setShowFinished((v) => !v)}
+            onClick={() => setShowFinished((isVisible) => !isVisible)}
             className="mb-3 flex items-center gap-1.5 rounded-full border border-white/[0.08] bg-white/[0.03] px-3 py-1 text-[11px] text-gray-400 hover:text-gray-200 hover:border-white/[0.15] transition-colors"
           >
             <span className={`inline-block text-[8px] transition-transform ${showFinished ? "rotate-90" : ""}`}>&#9654;</span>
@@ -116,7 +116,7 @@ export const SerieBlock = ({ serie }: { serie: Serie }) => {
             <div key={dateKey}>
               <DateSeparator date={new Date(dateKey)} isLast={i === dateKeys.length - 1} />
               <div className="space-y-2 pl-5 pb-4">
-                {grouped.get(dateKey)!.map((match) => (
+                {matchesByDate.get(dateKey)!.map((match) => (
                   <MatchCard key={match.id} match={match} />
                 ))}
               </div>

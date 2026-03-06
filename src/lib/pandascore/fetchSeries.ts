@@ -4,23 +4,8 @@ import { VALID_TIERS } from "./config";
 import type { PandaScoreMatch, PandaScoreSerie } from "./types/match";
 import type { Match, Serie, Stage } from "@/types/match";
 
-export const fetchSeriesFromPandaScore = async (): Promise<Serie[]> => {
-  const pandaSeries = await pandascoreGet<PandaScoreSerie[]>("/csgo/series", {
-    per_page: "50",
-    sort: "-begin_at",
-  });
-
-  const filteredSeries = pandaSeries.filter((s) =>
-    s.tournaments.some((t) => (VALID_TIERS as readonly string[]).includes(t.tier)),
-  );
-
-  const tournamentIds = filteredSeries
-    .flatMap((s) => s.tournaments.map((t) => t.id))
-    .join(",");
-
-  if (!tournamentIds) return [];
-
-  const [past, running, upcoming] = await Promise.all([
+const fetchAllMatches = async (tournamentIds: string): Promise<Match[]> => {
+  const [pastMatches, runningMatches, upcomingMatches] = await Promise.all([
     pandascoreGet<PandaScoreMatch[]>("/csgo/matches/past", {
       "filter[tournament_id]": tournamentIds,
       per_page: "50",
@@ -34,44 +19,74 @@ export const fetchSeriesFromPandaScore = async (): Promise<Serie[]> => {
     }),
   ]);
 
-  const allMatches = [...past, ...running, ...upcoming].map(mapMatch);
+  return [...pastMatches, ...runningMatches, ...upcomingMatches].map(mapMatch);
+};
 
+const groupMatchesByTournament = (matches: Match[]): Map<string, Match[]> => {
   const matchesByTournament = new Map<string, Match[]>();
-  for (const match of allMatches) {
-    const tid = match.tournament.id;
-    const group = matchesByTournament.get(tid) ?? [];
-    group.push(match);
-    matchesByTournament.set(tid, group);
+  for (const match of matches) {
+    const tournamentId = match.tournament.id;
+    const matchesForTournament = matchesByTournament.get(tournamentId) ?? [];
+    matchesForTournament.push(match);
+    matchesByTournament.set(tournamentId, matchesForTournament);
   }
+  return matchesByTournament;
+};
 
-  return filteredSeries
-    .map((s) => {
-      const stages: Stage[] = s.tournaments.map((t) => {
-        const matches = matchesByTournament.get(String(t.id)) ?? [];
-        matches.sort(
-          (a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime(),
-        );
-        return { id: String(t.id), name: t.name, matches };
-      });
+const sortMatchesByScheduledTime = (matches: Match[]): void => {
+  matches.sort(
+    (matchA, matchB) => new Date(matchA.scheduledAt).getTime() - new Date(matchB.scheduledAt).getTime(),
+  );
+};
 
-      const tiers = s.tournaments.map((t) => t.tier);
-      const tier = tiers.includes("s") ? "s" : "a";
+const buildSerieFromPandaScore = (
+  pandaSerie: PandaScoreSerie,
+  matchesByTournament: Map<string, Match[]>,
+): Serie => {
+  const stages: Stage[] = pandaSerie.tournaments.map((tournament) => {
+    const matches = matchesByTournament.get(String(tournament.id)) ?? [];
+    sortMatchesByScheduledTime(matches);
+    return { id: String(tournament.id), name: tournament.name, matches };
+  });
 
-      const region = s.tournaments.find((t) => t.region)?.region ?? null;
+  const tiers = pandaSerie.tournaments.map((tournament) => tournament.tier);
+  const highestTier = tiers.includes("s") ? "s" : "a";
+  const region = pandaSerie.tournaments.find((tournament) => tournament.region)?.region ?? null;
+  const serieName = pandaSerie.league.name + (pandaSerie.full_name ? ` ${pandaSerie.full_name}` : "");
 
-      const name = s.league.name + (s.full_name ? ` ${s.full_name}` : "");
+  return {
+    id: String(pandaSerie.id),
+    name: serieName,
+    leagueImageUrl: pandaSerie.league.image_url,
+    tier: highestTier,
+    region,
+    beginAt: pandaSerie.begin_at ?? "",
+    endAt: pandaSerie.end_at ?? "",
+    stages,
+  };
+};
 
-      return {
-        id: String(s.id),
-        name,
-        leagueImageUrl: s.league.image_url,
-        tier,
-        region,
-        beginAt: s.begin_at ?? "",
-        endAt: s.end_at ?? "",
-        stages,
-      };
-    })
-    .filter((s) => s.stages.some((st) => st.matches.length > 0))
-    .sort((a, b) => new Date(a.beginAt).getTime() - new Date(b.beginAt).getTime());
+export const fetchSeriesFromPandaScore = async (): Promise<Serie[]> => {
+  const pandaSeries = await pandascoreGet<PandaScoreSerie[]>("/csgo/series", {
+    per_page: "50",
+    sort: "-begin_at",
+  });
+
+  const seriesWithValidTier = pandaSeries.filter((serie) =>
+    serie.tournaments.some((tournament) => (VALID_TIERS as readonly string[]).includes(tournament.tier)),
+  );
+
+  const allTournamentIds = seriesWithValidTier
+    .flatMap((serie) => serie.tournaments.map((tournament) => tournament.id))
+    .join(",");
+
+  if (!allTournamentIds) return [];
+
+  const allMatches = await fetchAllMatches(allTournamentIds);
+  const matchesByTournament = groupMatchesByTournament(allMatches);
+
+  return seriesWithValidTier
+    .map((serie) => buildSerieFromPandaScore(serie, matchesByTournament))
+    .filter((serie) => serie.stages.some((stage) => stage.matches.length > 0))
+    .sort((serieA, serieB) => new Date(serieA.beginAt).getTime() - new Date(serieB.beginAt).getTime());
 };

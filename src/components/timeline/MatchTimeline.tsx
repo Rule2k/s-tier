@@ -15,11 +15,11 @@ const statusOrder: Record<Match["status"], number> = {
   canceled: 4,
 };
 
-const sortMatches = (matches: Match[]): Match[] =>
-  [...matches].sort((a, b) => {
-    const statusDiff = statusOrder[a.status] - statusOrder[b.status];
+const sortByStatusThenTime = (matches: Match[]): Match[] =>
+  [...matches].sort((matchA, matchB) => {
+    const statusDiff = statusOrder[matchA.status] - statusOrder[matchB.status];
     if (statusDiff !== 0) return statusDiff;
-    return new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime();
+    return new Date(matchA.scheduledAt).getTime() - new Date(matchB.scheduledAt).getTime();
   });
 
 const findClosestDateKey = (dateKeys: string[]): string | null => {
@@ -39,10 +39,10 @@ export const MatchTimeline = ({ matches }: { matches: Match[] }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const hasScrolled = useRef(false);
 
-  const valid = matches.filter((m) => m.scheduledAt);
-  const sorted = sortMatches(valid);
-  const grouped = groupMatchesByDate(sorted);
-  const dateKeys = Array.from(grouped.keys());
+  const scheduledMatches = matches.filter((match) => match.scheduledAt);
+  const sortedMatches = sortByStatusThenTime(scheduledMatches);
+  const matchesByDate = groupMatchesByDate(sortedMatches);
+  const dateKeys = Array.from(matchesByDate.keys());
   const scrollToKey = findClosestDateKey(dateKeys);
 
   useEffect(() => {
@@ -60,7 +60,7 @@ export const MatchTimeline = ({ matches }: { matches: Match[] }) => {
         >
           <DateSeparator date={new Date(dateKey)} />
           <div className="space-y-2">
-            {grouped.get(dateKey)!.map((match) => (
+            {matchesByDate.get(dateKey)!.map((match) => (
               <MatchCard key={match.id} match={match} />
             ))}
           </div>

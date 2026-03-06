@@ -1,6 +1,6 @@
 import type { MatchStatus } from "@/types/match";
 
-const config: Record<MatchStatus, { label: string; className: string }> = {
+const statusStyles: Record<MatchStatus, { label: string; className: string }> = {
   running: {
     label: "LIVE",
     className: "bg-red-500/20 text-red-400 animate-pulse",
@@ -24,7 +24,7 @@ const config: Record<MatchStatus, { label: string; className: string }> = {
 };
 
 export const StatusBadge = ({ status }: { status: MatchStatus }) => {
-  const { label, className } = config[status];
+  const { label, className } = statusStyles[status];
   return (
     <span className={`rounded px-2 py-1 text-xs font-semibold ${className}`}>
       {label}

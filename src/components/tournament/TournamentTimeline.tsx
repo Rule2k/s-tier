@@ -5,34 +5,35 @@ import type { Serie } from "@/types/match";
 import { buildTimelineRows } from "@/lib/tournaments/buildTimelineRows";
 import { SerieBlock } from "./SerieBlock";
 
-const findScrollTarget = (
-  rows: ReturnType<typeof buildTimelineRows>,
-): { rowIndex: number; serieId: string } | null => {
-  // Find first serie with a live match
-  for (let r = 0; r < rows.length; r++) {
-    for (const serie of rows[r].series) {
-      if (serie.stages.some((st) => st.matches.some((m) => m.status === "running"))) {
-        return { rowIndex: r, serieId: serie.id };
-      }
-    }
-  }
+const hasLiveMatch = (serie: Serie): boolean =>
+  serie.stages.some((stage) =>
+    stage.matches.some((match) => match.status === "running"),
+  );
 
-  // Otherwise, find serie closest to now
+const distanceToNow = (serie: Serie): number => {
   const now = Date.now();
-  let closest: { rowIndex: number; serieId: string; diff: number } | null = null;
+  const beginTime = new Date(serie.beginAt).getTime();
+  const endTime = new Date(serie.endAt).getTime();
+  if (now >= beginTime && now <= endTime) return 0;
+  return Math.min(Math.abs(now - beginTime), Math.abs(now - endTime));
+};
 
-  for (let r = 0; r < rows.length; r++) {
-    for (const serie of rows[r].series) {
-      const begin = new Date(serie.beginAt).getTime();
-      const end = new Date(serie.endAt).getTime();
-      const diff = now >= begin && now <= end ? 0 : Math.min(Math.abs(now - begin), Math.abs(now - end));
-      if (!closest || diff < closest.diff) {
-        closest = { rowIndex: r, serieId: serie.id, diff };
-      }
+const findSerieToScrollTo = (allSeries: Serie[]): string | null => {
+  const liveSerie = allSeries.find(hasLiveMatch);
+  if (liveSerie) return liveSerie.id;
+
+  let closestSerie: Serie | null = null;
+  let smallestDistance = Infinity;
+
+  for (const serie of allSeries) {
+    const distance = distanceToNow(serie);
+    if (distance < smallestDistance) {
+      smallestDistance = distance;
+      closestSerie = serie;
     }
   }
 
-  return closest;
+  return closestSerie?.id ?? null;
 };
 
 export const TournamentTimeline = ({ series }: { series: Serie[] }) => {
@@ -40,7 +41,8 @@ export const TournamentTimeline = ({ series }: { series: Serie[] }) => {
   const hasScrolled = useRef(false);
 
   const rows = buildTimelineRows(series);
-  const scrollTarget = findScrollTarget(rows);
+  const allSeries = rows.flatMap((row) => row.series);
+  const scrollTargetId = findSerieToScrollTo(allSeries);
 
   useEffect(() => {
     if (hasScrolled.current || !scrollRef.current) return;
@@ -48,15 +50,12 @@ export const TournamentTimeline = ({ series }: { series: Serie[] }) => {
     hasScrolled.current = true;
   }, []);
 
-  const allSeries = rows.flatMap((row) => row.series);
-
   return (
     <div className="space-y-5">
-      {allSeries.map((serie, i) => (
+      {allSeries.map((serie) => (
         <div
           key={serie.id}
-          ref={scrollTarget?.serieId === serie.id ? scrollRef : undefined}
-          className=""
+          ref={scrollTargetId === serie.id ? scrollRef : undefined}
         >
           <SerieBlock serie={serie} />
         </div>

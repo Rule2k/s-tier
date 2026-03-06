@@ -45,7 +45,7 @@ const ScoreRow = ({
   </div>
 );
 
-const borderColor: Record<Match["status"], string> = {
+const borderColorByStatus: Record<Match["status"], string> = {
   running: "border-l-red-500",
   not_started: "border-l-gray-700",
   finished: "border-l-gray-700",
@@ -54,16 +54,16 @@ const borderColor: Record<Match["status"], string> = {
 };
 
 export const MatchCard = ({ match }: { match: Match }) => {
-  const time = match.scheduledAt
+  const formattedTime = match.scheduledAt
     ? format(new Date(match.scheduledAt), "HH:mm")
     : "--:--";
 
   return (
     <div
-      className={`flex items-center gap-4 rounded-lg border border-gray-800 border-l-2 bg-gray-900/60 px-4 py-3 ${borderColor[match.status]}`}
+      className={`flex items-center gap-4 rounded-lg border border-gray-800 border-l-2 bg-gray-900/60 px-4 py-3 ${borderColorByStatus[match.status]}`}
     >
       <div className="flex w-16 shrink-0 flex-col items-center gap-1">
-        <span className="text-xs text-gray-500">{time}</span>
+        <span className="text-xs text-gray-500">{formattedTime}</span>
         <StatusBadge status={match.status} />
       </div>
       <div className="flex-1 space-y-1.5">
