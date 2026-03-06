@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type RefObject } from "react";
 import type { Serie } from "@/types/match";
 import { MatchCard } from "@/components/timeline/MatchCard";
 import { DateSeparator } from "@/components/timeline/DateSeparator";
@@ -29,7 +29,15 @@ const findDefaultStageIndex = (stages: Serie["stages"]): number => {
   return 0;
 };
 
-export const SerieBlock = ({ serie }: { serie: Serie }) => {
+export const SerieBlock = ({
+  serie,
+  scrollTargetMatchId,
+  scrollRef,
+}: {
+  serie: Serie;
+  scrollTargetMatchId?: string | null;
+  scrollRef?: RefObject<HTMLDivElement | null>;
+}) => {
   const allMatches = serie.stages.flatMap((stage) => stage.matches);
   const visibleStages = serie.stages.filter((stage) => stage.matches.length > 0);
   const [activeStage, setActiveStage] = useState(() => findDefaultStageIndex(visibleStages));
@@ -104,7 +112,12 @@ export const SerieBlock = ({ serie }: { serie: Serie }) => {
               <DateSeparator date={new Date(dateKey)} isLast={i === dateKeys.length - 1} />
               <div className="space-y-2 pl-5 pb-4">
                 {matchesByDate.get(dateKey)!.map((match) => (
-                  <MatchCard key={match.id} match={match} />
+                  <div
+                    key={match.id}
+                    ref={match.id === scrollTargetMatchId ? scrollRef : undefined}
+                  >
+                    <MatchCard match={match} />
+                  </div>
                 ))}
               </div>
             </div>
