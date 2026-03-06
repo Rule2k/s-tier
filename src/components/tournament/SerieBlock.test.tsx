@@ -6,7 +6,7 @@ describe("SerieBlock", () => {
   it("renders serie name and tier badge", () => {
     render(<SerieBlock serie={makeSerie()} />);
     expect(screen.getByText("BLAST Premier Spring 2025")).toBeInTheDocument();
-    expect(screen.getByText("S")).toBeInTheDocument();
+    expect(screen.getByText("S-Tier")).toBeInTheDocument();
   });
 
   it("renders league image when present", () => {
@@ -17,7 +17,7 @@ describe("SerieBlock", () => {
 
   it("renders date range", () => {
     render(<SerieBlock serie={makeSerie({ beginAt: "2025-06-01T00:00:00Z", endAt: "2025-06-15T00:00:00Z" })} />);
-    expect(screen.getByText("Jun 1 - Jun 15")).toBeInTheDocument();
+    expect(screen.getByText("June 1 - June 15")).toBeInTheDocument();
   });
 
   it("shows stage headers when 2+ stages", () => {

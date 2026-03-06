@@ -8,8 +8,8 @@ import { groupMatchesByDate } from "@/lib/matches/groupByDate";
 import { formatDateRange } from "@/lib/matches/formatDateRange";
 
 const tierConfig: Record<string, { label: string; accent: string; glow: string }> = {
-  s: { label: "S", accent: "text-yellow-400", glow: "shadow-yellow-500/10" },
-  a: { label: "A", accent: "text-purple-400", glow: "shadow-purple-500/10" },
+  s: { label: "S-Tier", accent: "text-yellow-400", glow: "shadow-yellow-500/10" },
+  a: { label: "A-Tier", accent: "text-purple-400", glow: "shadow-purple-500/10" },
 };
 
 const findDefaultStageIndex = (stages: Serie["stages"]): number => {

@@ -4,7 +4,7 @@ const getLabel = (date: Date): string => {
   if (isToday(date)) return "Today";
   if (isTomorrow(date)) return "Tomorrow";
   if (isYesterday(date)) return "Yesterday";
-  return format(date, "EEE, MMM d");
+  return format(date, "EEEE, MMMM d");
 };
 
 export const DateSeparator = ({
