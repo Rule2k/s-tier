@@ -1,48 +1,39 @@
 import { render, screen } from "@testing-library/react";
 import { TournamentTimeline } from "./TournamentTimeline";
-import { makeMatch } from "@/test/fixtures/matches";
+import { makeSerie, makeStage, makeMatch } from "@/test/fixtures/matches";
 
 describe("TournamentTimeline", () => {
-  it("renders tournament blocks grouped by tournament", () => {
-    const matches = [
-      makeMatch({ id: "1", scheduledAt: "2025-06-10T15:00:00Z", tournament: { id: "100", name: "BLAST", tier: "s", slug: "blast", region: "EU" } }),
-      makeMatch({ id: "2", scheduledAt: "2025-06-11T18:00:00Z", tournament: { id: "100", name: "BLAST", tier: "s", slug: "blast", region: "EU" } }),
-      makeMatch({ id: "3", scheduledAt: "2025-06-20T12:00:00Z", tournament: { id: "200", name: "IEM Cologne", tier: "a", slug: "iem", region: "NA" } }),
+  it("renders serie blocks", () => {
+    const series = [
+      makeSerie({ id: "1", name: "BLAST Premier Spring 2025" }),
+      makeSerie({ id: "2", name: "IEM Cologne 2025", beginAt: "2025-07-10T00:00:00Z", endAt: "2025-07-20T00:00:00Z" }),
     ];
 
-    render(<TournamentTimeline matches={matches} />);
-    expect(screen.getByText("BLAST")).toBeInTheDocument();
-    expect(screen.getByText("IEM Cologne")).toBeInTheDocument();
+    render(<TournamentTimeline series={series} />);
+    expect(screen.getByText("BLAST Premier Spring 2025")).toBeInTheDocument();
+    expect(screen.getByText("IEM Cologne 2025")).toBeInTheDocument();
   });
 
-  it("renders overlapping tournaments side by side", () => {
-    const matches = [
-      makeMatch({ id: "1", scheduledAt: "2025-06-10T10:00:00Z", tournament: { id: "100", name: "BLAST", tier: "s", slug: "blast", region: "EU" } }),
-      makeMatch({ id: "2", scheduledAt: "2025-06-15T10:00:00Z", tournament: { id: "100", name: "BLAST", tier: "s", slug: "blast", region: "EU" } }),
-      makeMatch({ id: "3", scheduledAt: "2025-06-12T10:00:00Z", tournament: { id: "200", name: "IEM", tier: "a", slug: "iem", region: "NA" } }),
+  it("renders overlapping series side by side", () => {
+    const series = [
+      makeSerie({ id: "1", beginAt: "2025-06-01T00:00:00Z", endAt: "2025-06-15T00:00:00Z" }),
+      makeSerie({ id: "2", beginAt: "2025-06-10T00:00:00Z", endAt: "2025-06-20T00:00:00Z" }),
     ];
 
-    const { container } = render(<TournamentTimeline matches={matches} />);
-    // The row with overlapping tournaments should have the flex overflow class
+    const { container } = render(<TournamentTimeline series={series} />);
     const flexRow = container.querySelector(".overflow-x-auto");
     expect(flexRow).toBeInTheDocument();
   });
 
-  it("renders single tournament without overflow class", () => {
-    const matches = [
-      makeMatch({ id: "1", scheduledAt: "2025-06-10T10:00:00Z", tournament: { id: "100", name: "BLAST", tier: "s", slug: "blast", region: "EU" } }),
-    ];
+  it("renders single serie without overflow class", () => {
+    const series = [makeSerie()];
 
-    const { container } = render(<TournamentTimeline matches={matches} />);
+    const { container } = render(<TournamentTimeline series={series} />);
     expect(container.querySelector(".overflow-x-auto")).not.toBeInTheDocument();
   });
 
-  it("filters out matches without scheduledAt", () => {
-    const matches = [
-      makeMatch({ id: "1", scheduledAt: "", tournament: { id: "100", name: "Ghost", tier: "s", slug: "ghost", region: null } }),
-    ];
-
-    render(<TournamentTimeline matches={matches} />);
-    expect(screen.queryByText("Ghost")).not.toBeInTheDocument();
+  it("renders empty when no series", () => {
+    const { container } = render(<TournamentTimeline series={[]} />);
+    expect(container.querySelector(".space-y-6")?.children).toHaveLength(0);
   });
 });

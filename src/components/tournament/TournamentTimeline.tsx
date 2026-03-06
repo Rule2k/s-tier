@@ -1,35 +1,33 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import type { Match } from "@/types/match";
-import { groupByTournament } from "@/lib/tournaments/groupByTournament";
+import type { Serie } from "@/types/match";
 import { buildTimelineRows } from "@/lib/tournaments/buildTimelineRows";
-import { TournamentBlock } from "./TournamentBlock";
+import { SerieBlock } from "./SerieBlock";
 
 const findScrollTarget = (
   rows: ReturnType<typeof buildTimelineRows>,
-): { rowIndex: number; tournamentId: string } | null => {
-  // Find first tournament with a live match
+): { rowIndex: number; serieId: string } | null => {
+  // Find first serie with a live match
   for (let r = 0; r < rows.length; r++) {
-    for (const t of rows[r].tournaments) {
-      if (t.matches.some((m) => m.status === "running")) {
-        return { rowIndex: r, tournamentId: t.id };
+    for (const serie of rows[r].series) {
+      if (serie.stages.some((st) => st.matches.some((m) => m.status === "running"))) {
+        return { rowIndex: r, serieId: serie.id };
       }
     }
   }
 
-  // Otherwise, find tournament closest to now
+  // Otherwise, find serie closest to now
   const now = Date.now();
-  let closest: { rowIndex: number; tournamentId: string; diff: number } | null = null;
+  let closest: { rowIndex: number; serieId: string; diff: number } | null = null;
 
   for (let r = 0; r < rows.length; r++) {
-    for (const t of rows[r].tournaments) {
-      const begin = new Date(t.beginAt).getTime();
-      const end = new Date(t.endAt).getTime();
-      // Prefer ongoing tournaments (now is between begin and end)
+    for (const serie of rows[r].series) {
+      const begin = new Date(serie.beginAt).getTime();
+      const end = new Date(serie.endAt).getTime();
       const diff = now >= begin && now <= end ? 0 : Math.min(Math.abs(now - begin), Math.abs(now - end));
       if (!closest || diff < closest.diff) {
-        closest = { rowIndex: r, tournamentId: t.id, diff };
+        closest = { rowIndex: r, serieId: serie.id, diff };
       }
     }
   }
@@ -37,12 +35,11 @@ const findScrollTarget = (
   return closest;
 };
 
-export const TournamentTimeline = ({ matches }: { matches: Match[] }) => {
+export const TournamentTimeline = ({ series }: { series: Serie[] }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const hasScrolled = useRef(false);
 
-  const tournaments = groupByTournament(matches.filter((m) => m.scheduledAt));
-  const rows = buildTimelineRows(tournaments);
+  const rows = buildTimelineRows(series);
   const scrollTarget = findScrollTarget(rows);
 
   useEffect(() => {
@@ -54,11 +51,11 @@ export const TournamentTimeline = ({ matches }: { matches: Match[] }) => {
   return (
     <div className="space-y-6">
       {rows.map((row, rowIndex) => {
-        const isMulti = row.tournaments.length > 1;
+        const isMulti = row.series.length > 1;
 
         return (
           <div
-            key={row.tournaments.map((t) => t.id).join("-")}
+            key={row.series.map((s) => s.id).join("-")}
             ref={scrollTarget?.rowIndex === rowIndex ? scrollRef : undefined}
             className={
               isMulti
@@ -66,12 +63,12 @@ export const TournamentTimeline = ({ matches }: { matches: Match[] }) => {
                 : undefined
             }
           >
-            {row.tournaments.map((tournament) => (
+            {row.series.map((serie) => (
               <div
-                key={tournament.id}
+                key={serie.id}
                 className={isMulti ? "min-w-[350px] flex-shrink-0 max-md:min-w-0 max-md:w-full" : undefined}
               >
-                <TournamentBlock tournament={tournament} />
+                <SerieBlock serie={serie} />
               </div>
             ))}
           </div>
