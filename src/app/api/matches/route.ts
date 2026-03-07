@@ -11,8 +11,12 @@ import type { PandaScoreSerie } from "@/lib/pandascore/types/match";
 import type { Serie } from "@/types/match";
 
 const getSeriesIndex = async (): Promise<PandaScoreSerie[]> => {
-  const cached = await redis.get(CACHE_KEYS.SERIES_INDEX);
-  if (cached) return JSON.parse(cached);
+  try {
+    const cached = await redis.get(CACHE_KEYS.SERIES_INDEX);
+    if (cached) return JSON.parse(cached);
+  } catch (error) {
+    console.error("Redis read failed for index:", error);
+  }
 
   const pandaSeries = await fetchSeriesIndex();
   redis
@@ -22,8 +26,12 @@ const getSeriesIndex = async (): Promise<PandaScoreSerie[]> => {
 };
 
 const getCachedSerie = async (id: string): Promise<Serie | null> => {
-  const cached = await redis.get(CACHE_KEYS.serieById(id));
-  if (cached) return JSON.parse(cached);
+  try {
+    const cached = await redis.get(CACHE_KEYS.serieById(id));
+    if (cached) return JSON.parse(cached);
+  } catch (error) {
+    console.error(`Redis read failed for serie ${id}:`, error);
+  }
   return null;
 };
 

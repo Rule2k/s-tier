@@ -1,17 +1,26 @@
 "use client";
 
 import { useEffect, useMemo } from "react";
-import { useSeries } from "@/hooks/useSeries";
+import { useSeriesNavigation } from "@/hooks/useSeriesNavigation";
 import { TournamentTimeline } from "@/components/tournament/TournamentTimeline";
 import { Spinner } from "@/components/ui/Spinner";
 import { useTeamFilter } from "@/context/TeamFilterContext";
 
 export default function Home() {
-  const { data: series, isLoading, error } = useSeries();
+  const {
+    series,
+    isLoading,
+    error,
+    loadPrevious,
+    loadNext,
+    hasPrevious,
+    hasNext,
+    loadingDirection,
+  } = useSeriesNavigation();
   const { selectedTeam, setTeams } = useTeamFilter();
 
   const uniqueTeams = useMemo(() => {
-    if (!series) return [];
+    if (!series.length) return [];
     const teamMap = new Map<string, { acronym: string | null; imageUrl: string | null }>();
     for (const serie of series) {
       for (const stage of serie.stages) {
@@ -33,7 +42,7 @@ export default function Home() {
   }, [uniqueTeams, setTeams]);
 
   const filteredSeries = useMemo(() => {
-    if (!series || !selectedTeam) return series;
+    if (!series.length || !selectedTeam) return series;
     return series
       .map((serie) => ({
         ...serie,
@@ -49,7 +58,14 @@ export default function Home() {
 
   if (isLoading) return <Spinner />;
   if (error) return <p className="text-red-400">Failed to load matches.</p>;
-  if (!series?.length) return <p className="text-gray-500">No matches found.</p>;
+  if (!series.length) return <p className="text-gray-500">No matches found.</p>;
 
-  return <TournamentTimeline series={filteredSeries ?? []} />;
+  return (
+    <TournamentTimeline
+      series={filteredSeries}
+      onLoadPrevious={hasPrevious ? loadPrevious : undefined}
+      onLoadNext={hasNext ? loadNext : undefined}
+      loadingDirection={loadingDirection}
+    />
+  );
 }

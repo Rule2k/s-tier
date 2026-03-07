@@ -24,8 +24,12 @@ const mapToSummary = (serie: PandaScoreSerie): SerieSummary => {
 };
 
 const getSeriesIndex = async (): Promise<PandaScoreSerie[]> => {
-  const cached = await redis.get(CACHE_KEYS.SERIES_INDEX);
-  if (cached) return JSON.parse(cached);
+  try {
+    const cached = await redis.get(CACHE_KEYS.SERIES_INDEX);
+    if (cached) return JSON.parse(cached);
+  } catch (error) {
+    console.error("Redis read failed, falling back to PandaScore:", error);
+  }
 
   const pandaSeries = await fetchSeriesIndex();
   redis

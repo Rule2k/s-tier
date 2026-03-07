@@ -61,19 +61,26 @@ describe("GET /api/matches", () => {
       expect(fetchSerieWithMatches).toHaveBeenCalledWith(pandaSeries[0]);
     });
 
-    it("falls back to fetchSeriesFromPandaScore when index fails", async () => {
+    it("falls back to PandaScore when Redis is down", async () => {
+      const pandaSeries = [makePandaScoreSerie({ id: 1 })];
+      const serie = makeSerie({ id: "1" });
+
       vi.mocked(redis.get).mockRejectedValue(new Error("Redis down"));
-      const series = [makeSerie()];
-      vi.mocked(fetchSeriesFromPandaScore).mockResolvedValue(series);
+      vi.mocked(fetchSeriesIndex).mockResolvedValue(pandaSeries);
+      vi.mocked(selectRelevantSeries).mockReturnValue(pandaSeries);
+      vi.mocked(fetchSerieWithMatches).mockResolvedValue(serie);
+      vi.mocked(redis.set).mockRejectedValue(new Error("Redis down"));
 
       const response = await GET(makeRequest());
       const data = await response.json();
 
-      expect(data).toEqual(series);
+      expect(data).toEqual([serie]);
+      expect(fetchSeriesIndex).toHaveBeenCalled();
     });
 
-    it("returns 500 when everything fails", async () => {
+    it("returns 500 when both Redis and PandaScore fail", async () => {
       vi.mocked(redis.get).mockRejectedValue(new Error("Redis down"));
+      vi.mocked(fetchSeriesIndex).mockRejectedValue(new Error("API down"));
       vi.mocked(fetchSeriesFromPandaScore).mockRejectedValue(new Error("API down"));
 
       const response = await GET(makeRequest());
@@ -120,8 +127,9 @@ describe("GET /api/matches", () => {
       expect(response.status).toBe(404);
     });
 
-    it("returns 500 on error", async () => {
+    it("returns 500 when both Redis and PandaScore fail", async () => {
       vi.mocked(redis.get).mockRejectedValue(new Error("Redis down"));
+      vi.mocked(fetchSeriesIndex).mockRejectedValue(new Error("API down"));
 
       const response = await GET(makeRequest({ serieId: "42" }));
 
