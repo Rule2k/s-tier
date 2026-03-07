@@ -82,14 +82,11 @@ export const SerieBlock = ({
       <div data-serie-header className="sticky top-[57px] z-10 backdrop-blur-md bg-gray-950/80 border-b border-white/[0.06]">
         <div className="px-5 py-4 bg-gradient-to-r from-white/[0.06] to-transparent">
           <div className="flex items-center gap-3">
-            {serie.leagueImageUrl && (
-              <img src={serie.leagueImageUrl} alt="" className="h-7 w-7 rounded-lg object-contain" />
-            )}
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
                 <h3 className="text-sm font-bold text-white truncate">{serie.name}</h3>
                 {tierStyle && (
-                  <span className={`text-[10px] font-black tracking-wider ${tierStyle.accent}`}>
+                  <span className={`shrink-0 whitespace-nowrap text-[10px] font-black tracking-wider ${tierStyle.accent}`}>
                     {tierStyle.label}
                   </span>
                 )}

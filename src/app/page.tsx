@@ -1,14 +1,14 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { useSeries } from "@/hooks/useSeries";
 import { TournamentTimeline } from "@/components/tournament/TournamentTimeline";
 import { Spinner } from "@/components/ui/Spinner";
-import { TeamFilter } from "@/components/ui/TeamFilter";
+import { useTeamFilter } from "@/context/TeamFilterContext";
 
 export default function Home() {
   const { data: series, isLoading, error } = useSeries();
-  const [selectedTeam, setSelectedTeam] = useState<string | null>(null);
+  const { selectedTeam, setTeams } = useTeamFilter();
 
   const uniqueTeams = useMemo(() => {
     if (!series) return [];
@@ -27,6 +27,10 @@ export default function Home() {
     return Array.from(teamMap, ([name, { acronym, imageUrl }]) => ({ name, acronym, imageUrl }))
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [series]);
+
+  useEffect(() => {
+    setTeams(uniqueTeams);
+  }, [uniqueTeams, setTeams]);
 
   const filteredSeries = useMemo(() => {
     if (!series || !selectedTeam) return series;
@@ -47,12 +51,5 @@ export default function Home() {
   if (error) return <p className="text-red-400">Failed to load matches.</p>;
   if (!series?.length) return <p className="text-gray-500">No matches found.</p>;
 
-  return (
-    <div>
-      <div className="mb-4">
-        <TeamFilter teams={uniqueTeams} selectedTeam={selectedTeam} onChange={setSelectedTeam} />
-      </div>
-      <TournamentTimeline series={filteredSeries ?? []} />
-    </div>
-  );
+  return <TournamentTimeline series={filteredSeries ?? []} />;
 }

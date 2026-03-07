@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { QueryProvider } from "./providers";
+import { TeamFilterProvider } from "@/context/TeamFilterContext";
 import { Header } from "@/components/layout/Header";
 import "./globals.css";
 
@@ -30,8 +31,10 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <QueryProvider>
-          <Header />
-          <main className="mx-auto max-w-3xl px-4 py-6">{children}</main>
+          <TeamFilterProvider>
+            <Header />
+            <main className="mx-auto max-w-3xl px-4 py-6">{children}</main>
+          </TeamFilterProvider>
         </QueryProvider>
       </body>
     </html>

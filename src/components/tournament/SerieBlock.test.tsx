@@ -9,13 +9,7 @@ describe("SerieBlock", () => {
     expect(screen.getByText("S-Tier")).toBeInTheDocument();
   });
 
-  it("renders league image when present", () => {
-    const { container } = render(<SerieBlock serie={makeSerie({ leagueImageUrl: "https://img.test/logo.png" })} />);
-    const leagueImg = container.querySelector('img[src="https://img.test/logo.png"]');
-    expect(leagueImg).toBeInTheDocument();
-  });
-
-  it("renders date range", () => {
+it("renders date range", () => {
     render(<SerieBlock serie={makeSerie({ beginAt: "2025-06-01T00:00:00Z", endAt: "2025-06-15T00:00:00Z" })} />);
     expect(screen.getByText("June 1 - June 15")).toBeInTheDocument();
   });

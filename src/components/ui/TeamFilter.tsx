@@ -49,7 +49,7 @@ export const TeamFilter = ({ teams, selectedTeam, onChange }: TeamFilterProps) =
   };
 
   return (
-    <div ref={containerRef} className="relative w-64">
+    <div ref={containerRef} className="relative w-full max-w-64">
       <div className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2">
         <input
           type="text"
