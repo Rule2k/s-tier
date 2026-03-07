@@ -1,7 +1,13 @@
+import { NextRequest } from "next/server";
 import { GET } from "./route";
 import redis from "@/lib/redis/client";
-import { fetchSeriesFromPandaScore } from "@/lib/pandascore/fetchSeries";
-import { makeSerie } from "@/test/fixtures/matches";
+import {
+  fetchSeriesFromPandaScore,
+  fetchSeriesIndex,
+  fetchSerieWithMatches,
+  selectRelevantSeries,
+} from "@/lib/pandascore/fetchSeries";
+import { makeSerie, makePandaScoreSerie } from "@/test/fixtures/matches";
 
 vi.mock("@/lib/redis/client", () => ({
   default: { get: vi.fn(), set: vi.fn() },
@@ -9,55 +15,117 @@ vi.mock("@/lib/redis/client", () => ({
 
 vi.mock("@/lib/pandascore/fetchSeries");
 
+const makeRequest = (params?: Record<string, string>) => {
+  const url = new URL("http://localhost/api/matches");
+  if (params) Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
+  return new NextRequest(url);
+};
+
 describe("GET /api/matches", () => {
   afterEach(() => {
     vi.restoreAllMocks();
   });
 
-  it("returns cached data from Redis without calling PandaScore", async () => {
-    const cached = [makeSerie()];
-    vi.mocked(redis.get).mockResolvedValue(JSON.stringify(cached));
+  describe("default (no params)", () => {
+    it("returns series from individual caches via index", async () => {
+      const pandaSeries = [makePandaScoreSerie({ id: 1 })];
+      const serie = makeSerie({ id: "1" });
 
-    const response = await GET();
-    const data = await response.json();
+      vi.mocked(redis.get)
+        .mockResolvedValueOnce(JSON.stringify(pandaSeries)) // series:index
+        .mockResolvedValueOnce(JSON.stringify(serie));       // series:1
+      vi.mocked(selectRelevantSeries).mockReturnValue(pandaSeries);
 
-    expect(data).toEqual(cached);
-    expect(fetchSeriesFromPandaScore).not.toHaveBeenCalled();
+      const response = await GET(makeRequest());
+      const data = await response.json();
+
+      expect(data).toEqual([serie]);
+      expect(fetchSeriesFromPandaScore).not.toHaveBeenCalled();
+    });
+
+    it("fetches and caches serie on individual cache miss", async () => {
+      const pandaSeries = [makePandaScoreSerie({ id: 1 })];
+      const serie = makeSerie({ id: "1" });
+
+      vi.mocked(redis.get)
+        .mockResolvedValueOnce(JSON.stringify(pandaSeries)) // series:index
+        .mockResolvedValueOnce(null);                        // series:1 miss
+      vi.mocked(selectRelevantSeries).mockReturnValue(pandaSeries);
+      vi.mocked(fetchSerieWithMatches).mockResolvedValue(serie);
+      vi.mocked(redis.set).mockResolvedValue("OK");
+
+      const response = await GET(makeRequest());
+      const data = await response.json();
+
+      expect(data).toEqual([serie]);
+      expect(fetchSerieWithMatches).toHaveBeenCalledWith(pandaSeries[0]);
+    });
+
+    it("falls back to fetchSeriesFromPandaScore when index fails", async () => {
+      vi.mocked(redis.get).mockRejectedValue(new Error("Redis down"));
+      const series = [makeSerie()];
+      vi.mocked(fetchSeriesFromPandaScore).mockResolvedValue(series);
+
+      const response = await GET(makeRequest());
+      const data = await response.json();
+
+      expect(data).toEqual(series);
+    });
+
+    it("returns 500 when everything fails", async () => {
+      vi.mocked(redis.get).mockRejectedValue(new Error("Redis down"));
+      vi.mocked(fetchSeriesFromPandaScore).mockRejectedValue(new Error("API down"));
+
+      const response = await GET(makeRequest());
+
+      expect(response.status).toBe(500);
+    });
   });
 
-  it("falls back to PandaScore when Redis cache is empty", async () => {
-    vi.mocked(redis.get).mockResolvedValue(null);
-    const series = [makeSerie()];
-    vi.mocked(fetchSeriesFromPandaScore).mockResolvedValue(series);
-    vi.mocked(redis.set).mockResolvedValue("OK");
+  describe("with ?serieId=", () => {
+    it("returns cached serie", async () => {
+      const serie = makeSerie({ id: "42" });
+      vi.mocked(redis.get).mockResolvedValue(JSON.stringify(serie));
 
-    const response = await GET();
-    const data = await response.json();
+      const response = await GET(makeRequest({ serieId: "42" }));
+      const data = await response.json();
 
-    expect(data).toEqual(series);
-    expect(fetchSeriesFromPandaScore).toHaveBeenCalledOnce();
-  });
+      expect(data).toEqual(serie);
+    });
 
-  it("falls back to PandaScore when Redis throws", async () => {
-    vi.mocked(redis.get).mockRejectedValue(new Error("Connection refused"));
-    const series = [makeSerie()];
-    vi.mocked(fetchSeriesFromPandaScore).mockResolvedValue(series);
-    vi.mocked(redis.set).mockResolvedValue("OK");
+    it("fetches and caches on cache miss", async () => {
+      const pandaSerie = makePandaScoreSerie({ id: 42 });
+      const serie = makeSerie({ id: "42" });
 
-    const response = await GET();
-    const data = await response.json();
+      vi.mocked(redis.get)
+        .mockResolvedValueOnce(null)                          // series:42 miss
+        .mockResolvedValueOnce(JSON.stringify([pandaSerie])); // series:index
+      vi.mocked(fetchSerieWithMatches).mockResolvedValue(serie);
+      vi.mocked(redis.set).mockResolvedValue("OK");
 
-    expect(data).toEqual(series);
-  });
+      const response = await GET(makeRequest({ serieId: "42" }));
+      const data = await response.json();
 
-  it("returns 500 when both Redis and PandaScore fail", async () => {
-    vi.mocked(redis.get).mockRejectedValue(new Error("Redis down"));
-    vi.mocked(fetchSeriesFromPandaScore).mockRejectedValue(new Error("API down"));
+      expect(data).toEqual(serie);
+      expect(fetchSerieWithMatches).toHaveBeenCalledWith(pandaSerie);
+    });
 
-    const response = await GET();
+    it("returns 404 when serie not found in index", async () => {
+      vi.mocked(redis.get)
+        .mockResolvedValueOnce(null)             // series:99 miss
+        .mockResolvedValueOnce(JSON.stringify([])); // empty index
 
-    expect(response.status).toBe(500);
-    const data = await response.json();
-    expect(data).toEqual({ error: "Failed to fetch series" });
+      const response = await GET(makeRequest({ serieId: "99" }));
+
+      expect(response.status).toBe(404);
+    });
+
+    it("returns 500 on error", async () => {
+      vi.mocked(redis.get).mockRejectedValue(new Error("Redis down"));
+
+      const response = await GET(makeRequest({ serieId: "42" }));
+
+      expect(response.status).toBe(500);
+    });
   });
 });
