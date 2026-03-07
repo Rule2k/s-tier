@@ -37,3 +37,13 @@ export interface Serie {
   endAt: string;
   stages: Stage[];
 }
+
+export interface SerieSummary {
+  id: string;
+  name: string;
+  leagueImageUrl: string | null;
+  tier: string;
+  region: string | null;
+  beginAt: string;
+  endAt: string;
+}

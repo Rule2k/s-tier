@@ -108,24 +108,34 @@ const buildSerieFromPandaScore = (
   };
 };
 
-export const fetchSeriesFromPandaScore = async (): Promise<Serie[]> => {
-  const pandaSeries = await pandascoreGet<PandaScoreSerie[]>("/csgo/series", {
+export const fetchSeriesIndex = async (): Promise<PandaScoreSerie[]> =>
+  pandascoreGet<PandaScoreSerie[]>("/csgo/series", {
     "filter[tier]": "s,a",
     per_page: "100",
     sort: "-begin_at",
   });
 
+export const fetchSerieWithMatches = async (
+  pandaSerie: PandaScoreSerie,
+): Promise<Serie | null> => {
+  const matches = await fetchMatchesForSerie(pandaSerie.id);
+  if (matches.length === 0) return null;
+
+  const matchesByTournament = groupMatchesByTournament(matches);
+  return buildSerieFromPandaScore(pandaSerie, matchesByTournament);
+};
+
+export const fetchSeriesFromPandaScore = async (): Promise<Serie[]> => {
+  const pandaSeries = await fetchSeriesIndex();
   const relevantSeries = selectRelevantSeries(pandaSeries, 5);
 
   if (relevantSeries.length === 0) return [];
 
-  const allMatches = (
-    await Promise.all(relevantSeries.map((serie) => fetchMatchesForSerie(serie.id)))
-  ).flat();
-  const matchesByTournament = groupMatchesByTournament(allMatches);
+  const results = await Promise.all(
+    relevantSeries.map((serie) => fetchSerieWithMatches(serie)),
+  );
 
-  return relevantSeries
-    .map((serie) => buildSerieFromPandaScore(serie, matchesByTournament))
-    .filter((serie) => serie.stages.some((stage) => stage.matches.length > 0))
+  return results
+    .filter((serie): serie is Serie => serie !== null)
     .sort((serieA, serieB) => new Date(serieA.beginAt).getTime() - new Date(serieB.beginAt).getTime());
 };
