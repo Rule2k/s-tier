@@ -4,22 +4,63 @@ import { mapMatch } from "./mappers/mapMatch";
 import type { PandaScoreMatch, PandaScoreSerie } from "./types/match";
 import type { Match, Serie, Stage } from "@/types/match";
 
-const fetchAllMatches = async (tournamentIds: string): Promise<Match[]> => {
-  const [pastMatches, runningMatches, upcomingMatches] = await Promise.all([
-    pandascoreGet<PandaScoreMatch[]>("/csgo/matches/past", {
-      "filter[tournament_id]": tournamentIds,
-      per_page: "100",
-    }),
-    pandascoreGet<PandaScoreMatch[]>("/csgo/matches/running", {
-      "filter[tournament_id]": tournamentIds,
-    }),
-    pandascoreGet<PandaScoreMatch[]>("/csgo/matches/upcoming", {
-      "filter[tournament_id]": tournamentIds,
-      per_page: "100",
-    }),
-  ]);
+export const selectRelevantSeries = (
+  series: PandaScoreSerie[],
+  count: number,
+): PandaScoreSerie[] => {
+  if (series.length <= count) return series;
 
-  return [...pastMatches, ...runningMatches, ...upcomingMatches].map(mapMatch);
+  const sortedSeries = [...series].sort(
+    (a, b) => new Date(a.begin_at ?? "").getTime() - new Date(b.begin_at ?? "").getTime(),
+  );
+
+  const now = Date.now();
+
+  // Find the current series (begin_at <= now <= end_at)
+  let anchorIndex = sortedSeries.findIndex((sortedSerie) => {
+    const begin = new Date(sortedSerie.begin_at ?? "").getTime();
+    const end = new Date(sortedSerie.end_at ?? "").getTime();
+    return begin <= now && now <= end;
+  });
+
+  // If none is current, find the closest to now
+  if (anchorIndex === -1) {
+    let minDistance = Infinity;
+    sortedSeries.forEach((s, i) => {
+      const begin = new Date(s.begin_at ?? "").getTime();
+      const end = new Date(s.end_at ?? "").getTime();
+      const distance = Math.min(Math.abs(now - begin), Math.abs(now - end));
+      if (distance < minDistance) {
+        minDistance = distance;
+        anchorIndex = i;
+      }
+    });
+  }
+
+  // Build a window of `count` centered on anchorIndex
+  const half = Math.floor(count / 2);
+  let start = anchorIndex - half;
+  let end = start + count;
+
+  if (start < 0) {
+    start = 0;
+    end = count;
+  }
+  if (end > sortedSeries.length) {
+    end = sortedSeries.length;
+    start = end - count;
+  }
+
+  return sortedSeries.slice(start, end);
+};
+
+const fetchMatchesForSerie = async (serieId: number): Promise<Match[]> => {
+  const matches = await pandascoreGet<PandaScoreMatch[]>("/csgo/matches", {
+    "filter[serie_id]": String(serieId),
+    per_page: "100",
+  });
+
+  return matches.map(mapMatch);
 };
 
 const groupMatchesByTournament = (matches: Match[]): Map<string, Match[]> => {
@@ -74,16 +115,16 @@ export const fetchSeriesFromPandaScore = async (): Promise<Serie[]> => {
     sort: "-begin_at",
   });
 
-  const allTournamentIds = pandaSeries
-    .flatMap((serie) => serie.tournaments.map((tournament) => tournament.id))
-    .join(",");
+  const relevantSeries = selectRelevantSeries(pandaSeries, 5);
 
-  if (!allTournamentIds) return [];
+  if (relevantSeries.length === 0) return [];
 
-  const allMatches = await fetchAllMatches(allTournamentIds);
+  const allMatches = (
+    await Promise.all(relevantSeries.map((serie) => fetchMatchesForSerie(serie.id)))
+  ).flat();
   const matchesByTournament = groupMatchesByTournament(allMatches);
 
-  return pandaSeries
+  return relevantSeries
     .map((serie) => buildSerieFromPandaScore(serie, matchesByTournament))
     .filter((serie) => serie.stages.some((stage) => stage.matches.length > 0))
     .sort((serieA, serieB) => new Date(serieA.beginAt).getTime() - new Date(serieB.beginAt).getTime());
