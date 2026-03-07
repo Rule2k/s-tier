@@ -58,11 +58,11 @@ const findDefaultStageIndex = (stages: Serie["stages"]): number => {
 
 export const SerieBlock = ({
   serie,
-  scrollTargetMatchId,
+  scrollTargetDate,
   scrollRef,
 }: {
   serie: Serie;
-  scrollTargetMatchId?: string | null;
+  scrollTargetDate?: string | null;
   scrollRef?: RefObject<HTMLDivElement | null>;
 }) => {
   const visibleStages = serie.stages.filter((stage) => stage.matches.length > 0);
@@ -158,14 +158,14 @@ export const SerieBlock = ({
       <div className="p-4">
         <div className="space-y-0">
           {dateKeys.map((dateKey, i) => (
-            <div key={dateKey}>
+            <div
+              key={dateKey}
+              ref={dateKey === scrollTargetDate ? scrollRef : undefined}
+            >
               <DateSeparator date={new Date(dateKey)} isLast={i === dateKeys.length - 1} />
               <div className="space-y-2 pl-5 pb-4">
                 {matchesByDate.get(dateKey)!.map((match) => (
-                  <div
-                    key={match.id}
-                    ref={match.id === scrollTargetMatchId ? scrollRef : undefined}
-                  >
+                  <div key={match.id}>
                     <MatchCard match={match} />
                   </div>
                 ))}

@@ -1,32 +1,33 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import type { Match, Serie } from "@/types/match";
+import type { Serie } from "@/types/match";
 import { buildTimelineRows } from "@/lib/tournaments/buildTimelineRows";
 import { SerieBlock } from "./SerieBlock";
 
-const findMatchToScrollTo = (allSeries: Serie[]): string | null => {
-  const allMatches = allSeries.flatMap((serie) =>
-    serie.stages.flatMap((stage) => stage.matches),
-  );
+const findClosestDateKey = (allSeries: Serie[]): string | null => {
+  const now = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
 
-  const liveMatch = allMatches.find((match) => match.status === "running");
-  if (liveMatch) return liveMatch.id;
+  let closestDateKey: string | null = null;
+  let smallestDiff = Infinity;
 
-  const now = Date.now();
-  let closestUpcoming: Match | null = null;
-  let smallestTimeUntilStart = Infinity;
-
-  for (const match of allMatches) {
-    if (match.status !== "not_started" || !match.scheduledAt) continue;
-    const timeUntilStart = new Date(match.scheduledAt).getTime() - now;
-    if (timeUntilStart > 0 && timeUntilStart < smallestTimeUntilStart) {
-      smallestTimeUntilStart = timeUntilStart;
-      closestUpcoming = match;
+  for (const serie of allSeries) {
+    for (const stage of serie.stages) {
+      for (const match of stage.matches) {
+        if (!match.scheduledAt) continue;
+        const d = new Date(match.scheduledAt);
+        const dayKey = new Date(d.getFullYear(), d.getMonth(), d.getDate()).toISOString();
+        const diff = Math.abs(new Date(dayKey).getTime() - todayStart);
+        if (diff < smallestDiff) {
+          smallestDiff = diff;
+          closestDateKey = dayKey;
+        }
+      }
     }
   }
 
-  return closestUpcoming?.id ?? null;
+  return closestDateKey;
 };
 
 export const TournamentTimeline = ({ series }: { series: Serie[] }) => {
@@ -35,7 +36,7 @@ export const TournamentTimeline = ({ series }: { series: Serie[] }) => {
 
   const rows = buildTimelineRows(series);
   const allSeries = rows.flatMap((row) => row.series);
-  const scrollTargetMatchId = findMatchToScrollTo(allSeries);
+  const scrollTargetDate = findClosestDateKey(allSeries);
 
   useEffect(() => {
     if (hasScrolled.current || !scrollRef.current) return;
@@ -56,7 +57,7 @@ export const TournamentTimeline = ({ series }: { series: Serie[] }) => {
         <SerieBlock
           key={serie.id}
           serie={serie}
-          scrollTargetMatchId={scrollTargetMatchId}
+          scrollTargetDate={scrollTargetDate}
           scrollRef={scrollRef}
         />
       ))}
