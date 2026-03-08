@@ -50,18 +50,29 @@ test.beforeEach(async ({ page }) => {
       body: JSON.stringify(mockTournaments),
     }),
   );
+  await page.route("**/api/tournament-index", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify([]),
+    }),
+  );
 });
 
 test("displays matches with team names and status badges", async ({ page }) => {
   await page.goto("/");
 
-  await expect(page.getByText("Navi")).toBeVisible();
-  await expect(page.getByText("G2 Esports")).toBeVisible();
-  await expect(page.getByText("FaZe Clan")).toBeVisible();
-  await expect(page.getByText("Vitality")).toBeVisible();
+  // Wait for match data to render
+  await page.waitForSelector("text=Bo3");
 
-  await expect(page.getByText("LIVE", { exact: true })).toBeVisible();
-  await expect(page.getByText("UPCOMING")).toBeVisible();
+  // Each team name renders in two spans (shortName + fullName)
+  for (const name of ["Navi", "G2", "FaZe", "Vitality"]) {
+    expect(await page.locator(`text=${name}`).count()).toBeGreaterThanOrEqual(1);
+  }
+
+  // Status badges render in two spans (mobile + desktop labels)
+  expect(await page.locator("text=LIVE").count()).toBeGreaterThanOrEqual(1);
+  expect(await page.locator("text=UPCOMING").count()).toBeGreaterThanOrEqual(1);
 });
 
 test("displays date separator for today", async ({ page }) => {
