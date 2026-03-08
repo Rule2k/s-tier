@@ -1,7 +1,7 @@
 import { centralClient } from "./clients/central";
 import { liveClient } from "./clients/live";
-import allSeriesQuery from "./queries/allSeries.graphql";
-import seriesStateQuery from "./queries/seriesState.graphql";
+import { allSeriesQuery } from "./queries/allSeries";
+import { seriesStateQuery } from "./queries/seriesState";
 import { mapGridToMatch } from "./mappers/mapMatch";
 
 import type { GridSeries, GridAllSeriesResponse } from "./types/series";

@@ -1,0 +1,26 @@
+export const seriesStateQuery = `
+  query SeriesState($id: ID!) {
+    seriesState(id: $id) {
+      id
+      started
+      finished
+      teams {
+        id
+        name
+        score
+      }
+      games {
+        sequenceNumber
+        started
+        finished
+        map {
+          name
+        }
+        teams {
+          score
+          side
+        }
+      }
+    }
+  }
+`;
