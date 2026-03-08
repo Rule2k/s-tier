@@ -12,6 +12,7 @@ import type { TournamentSummary } from "../src/types/match";
 
 const REFRESH_INTERVAL = 60_000; // 60 seconds
 const MAX_STATE_FETCHES_PER_CYCLE = 100;
+const ONE_HOUR_MS = 60 * 60 * 1000;
 
 const refreshTournaments = async () => {
   try {
@@ -50,8 +51,8 @@ const refreshTournaments = async () => {
       for (const gs of gridSeriesList) {
         const scheduledTime = new Date(gs.startTimeScheduled).getTime();
 
-        // Skip future matches — no state to fetch
-        if (scheduledTime > now) continue;
+        // Skip matches more than 1 hour in the future — unlikely to have started
+        if (scheduledTime > now + ONE_HOUR_MS) continue;
 
         // Check if we already have a finished state cached
         const cachedRaw = await redis.get(CACHE_KEYS.matchState(gs.id));
