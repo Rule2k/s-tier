@@ -45,23 +45,43 @@ const ScoreRow = ({
   </div>
 );
 
-const MapScoreLine = ({ maps }: { maps: MapScore[] }) => (
+const MapScoreLine = ({
+  maps,
+  teams,
+}: {
+  maps: MapScore[];
+  teams: Match["teams"];
+}) => (
   <div className="flex items-center gap-2.5 text-[11px] text-gray-500">
-    {maps.map((map, i) => (
-      <span key={map.mapNumber} className="flex items-center gap-1">
-        {i > 0 && <span className="text-white/[0.06]">·</span>}
-        <span>{map.mapName}</span>
-        <span
-          className={
-            map.status === "running"
-              ? "text-yellow-400 font-semibold"
-              : "text-gray-400"
-          }
-        >
-          {map.scores[0]}–{map.scores[1]}
+    {maps.map((map, i) => {
+      const winnerIndex =
+        map.status === "finished"
+          ? map.scores[0] > map.scores[1]
+            ? 0
+            : 1
+          : null;
+      const winnerLogo =
+        winnerIndex !== null ? teams[winnerIndex]?.logoUrl : null;
+
+      return (
+        <span key={map.mapNumber} className="flex items-center gap-1">
+          {i > 0 && <span className="text-white/[0.06]">·</span>}
+          {winnerLogo && (
+            <img src={winnerLogo} alt="" className="h-3.5 w-3.5" />
+          )}
+          <span>{map.mapName}</span>
+          <span
+            className={
+              map.status === "running"
+                ? "text-yellow-400 font-semibold"
+                : "text-gray-400"
+            }
+          >
+            {map.scores[0]}–{map.scores[1]}
+          </span>
         </span>
-      </span>
-    ))}
+      );
+    })}
   </div>
 );
 
@@ -132,7 +152,7 @@ export const MatchCard = ({ match }: { match: Match }) => {
       </div>
       {playedMaps.length > 0 && (
         <div className="mt-2 flex justify-end border-t border-white/[0.04] pt-2">
-          <MapScoreLine maps={playedMaps} />
+          <MapScoreLine maps={playedMaps} teams={match.teams} />
         </div>
       )}
     </div>
