@@ -70,6 +70,9 @@ const refreshTournaments = async () => {
         stateFetchCount++;
 
         if (state) {
+          const status = state.finished ? "finished" : state.started ? "running" : "not_started";
+          const teams = gs.teams.map((t) => t.baseInfo.nameShortened).join(" vs ");
+          console.log(`[worker]   ${teams} (${gs.id}): ${status}`);
           seriesStates.set(gs.id, state);
           const ttl = state.finished
             ? CACHE_TTL.MATCH_FINISHED
@@ -80,6 +83,9 @@ const refreshTournaments = async () => {
             "EX",
             ttl,
           );
+        } else {
+          const teams = gs.teams.map((t) => t.baseInfo.nameShortened).join(" vs ");
+          console.warn(`[worker]   ${teams} (${gs.id}): state fetch returned null`);
         }
       }
 
