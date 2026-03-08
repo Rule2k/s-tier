@@ -45,18 +45,23 @@ const ScoreRow = ({
   </div>
 );
 
-const MapScoreRow = ({ map }: { map: MapScore }) => (
-  <div className="flex items-center gap-2 text-[11px] text-gray-400">
-    <span className="w-16 truncate text-gray-500">{map.mapName}</span>
-    <span
-      className={
-        map.status === "running"
-          ? "text-yellow-400 font-semibold"
-          : "text-gray-300"
-      }
-    >
-      {map.scores[0]}–{map.scores[1]}
-    </span>
+const MapScoreLine = ({ maps }: { maps: MapScore[] }) => (
+  <div className="flex items-center gap-2.5 text-[11px] text-gray-500">
+    {maps.map((map, i) => (
+      <span key={map.mapNumber} className="flex items-center gap-1">
+        {i > 0 && <span className="text-white/[0.06]">·</span>}
+        <span>{map.mapName}</span>
+        <span
+          className={
+            map.status === "running"
+              ? "text-yellow-400 font-semibold"
+              : "text-gray-400"
+          }
+        >
+          {map.scores[0]}–{map.scores[1]}
+        </span>
+      </span>
+    ))}
   </div>
 );
 
@@ -93,43 +98,43 @@ export const MatchCard = ({ match }: { match: Match }) => {
 
   return (
     <div
-      className={`flex items-center gap-4 rounded-lg border px-4 py-3 transition-colors ${cardStyle}`}
+      className={`rounded-lg border px-4 py-3 transition-colors ${cardStyle}`}
     >
-      <div className="flex w-16 shrink-0 flex-col items-center gap-1">
-        <span className="text-xs text-gray-500">{formattedTime}</span>
-        <StatusBadge status={match.status} />
-      </div>
-      <div className="flex-1 space-y-1.5">
-        {match.teams.map((team) => (
-          <TeamRow
-            key={team.name}
-            team={team}
-            isFinished={match.status === "finished"}
-          />
-        ))}
-      </div>
-      {playedMaps.length > 0 && (
-        <div className="shrink-0 space-y-0.5">
-          {playedMaps.map((map) => (
-            <MapScoreRow key={map.mapNumber} map={map} />
+      <div className="flex items-center gap-4">
+        <div className="flex w-16 shrink-0 flex-col items-center gap-1">
+          <span className="text-xs text-gray-500">{formattedTime}</span>
+          <StatusBadge status={match.status} />
+        </div>
+        <div className="flex-1 space-y-1.5">
+          {match.teams.map((team) => (
+            <TeamRow
+              key={team.name}
+              team={team}
+              isFinished={match.status === "finished"}
+            />
           ))}
         </div>
+        <div className="shrink-0">
+          <span className="text-xs font-medium text-gray-500">
+            {match.format}
+          </span>
+        </div>
+        <div className="w-6 shrink-0 space-y-1.5">
+          {match.teams.map((team) => (
+            <ScoreRow
+              key={team.name}
+              team={team}
+              isFinished={match.status === "finished"}
+              isLive={match.status === "running"}
+            />
+          ))}
+        </div>
+      </div>
+      {playedMaps.length > 0 && (
+        <div className="mt-2 flex justify-end border-t border-white/[0.04] pt-2">
+          <MapScoreLine maps={playedMaps} />
+        </div>
       )}
-      <div className="shrink-0">
-        <span className="text-xs font-medium text-gray-500">
-          {match.format}
-        </span>
-      </div>
-      <div className="w-6 shrink-0 space-y-1.5">
-        {match.teams.map((team) => (
-          <ScoreRow
-            key={team.name}
-            team={team}
-            isFinished={match.status === "finished"}
-            isLive={match.status === "running"}
-          />
-        ))}
-      </div>
     </div>
   );
 };
