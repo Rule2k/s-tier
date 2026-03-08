@@ -17,7 +17,6 @@ services:
     environment:
       - REDIS_URL=redis://redis:6379
       - GRID_API_KEY=${GRID_API_KEY}
-      - PANDASCORE_API_KEY=${PANDASCORE_API_KEY}
     restart: unless-stopped
 
   worker:
@@ -28,7 +27,7 @@ services:
       - redis
     environment:
       - REDIS_URL=redis://redis:6379
-      - PANDASCORE_API_KEY=${PANDASCORE_API_KEY}
+      - GRID_API_KEY=${GRID_API_KEY}
     restart: unless-stopped
 
 volumes:
