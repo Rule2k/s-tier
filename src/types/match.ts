@@ -20,6 +20,7 @@ export interface Match {
 
 export interface MatchTeam {
   name: string;
+  shortName: string;
   logoUrl: string | null;
   score: number | null;
   isWinner: boolean;

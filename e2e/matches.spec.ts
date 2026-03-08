@@ -14,8 +14,8 @@ const mockTournaments = [
         scheduledAt: today,
         format: "Bo3",
         teams: [
-          { name: "Navi", logoUrl: null, score: 1, isWinner: false },
-          { name: "G2 Esports", logoUrl: null, score: 0, isWinner: false },
+          { name: "Navi", shortName: "NAVI", logoUrl: null, score: 1, isWinner: false },
+          { name: "G2 Esports", shortName: "G2", logoUrl: null, score: 0, isWinner: false },
         ],
         maps: [
           {
@@ -33,8 +33,8 @@ const mockTournaments = [
         scheduledAt: today,
         format: "Bo3",
         teams: [
-          { name: "FaZe Clan", logoUrl: null, score: null, isWinner: false },
-          { name: "Vitality", logoUrl: null, score: null, isWinner: false },
+          { name: "FaZe Clan", shortName: "FaZe", logoUrl: null, score: null, isWinner: false },
+          { name: "Vitality", shortName: "VIT", logoUrl: null, score: null, isWinner: false },
         ],
         maps: [],
       },

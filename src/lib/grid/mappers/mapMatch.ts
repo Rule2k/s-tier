@@ -42,6 +42,7 @@ export const mapGridToMatch = (
 
     return {
       name: team.baseInfo.name,
+      shortName: team.baseInfo.nameShortened || team.baseInfo.name,
       logoUrl: team.baseInfo.logoUrl || null,
       score,
       isWinner,

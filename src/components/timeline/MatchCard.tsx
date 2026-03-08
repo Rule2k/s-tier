@@ -10,16 +10,19 @@ const TeamRow = ({
   isFinished: boolean;
 }) => (
   <div
-    className={`flex items-center gap-2.5 ${
+    className={`flex items-center gap-1.5 sm:gap-2.5 ${
       isFinished && !team.isWinner ? "opacity-40" : "text-white"
     }`}
   >
     {team.logoUrl ? (
-      <img src={team.logoUrl} alt={team.name} className="h-6 w-6" />
+      <img src={team.logoUrl} alt={team.name} className="h-5 w-5 sm:h-6 sm:w-6" />
     ) : (
-      <div className="h-6 w-6 rounded bg-gray-700" />
+      <div className="h-5 w-5 sm:h-6 sm:w-6 rounded bg-gray-700" />
     )}
-    <span className="text-sm font-medium">{team.name}</span>
+    <span className="truncate text-sm font-medium">
+      <span className="sm:hidden">{team.shortName}</span>
+      <span className="hidden sm:inline">{team.name}</span>
+    </span>
   </div>
 );
 
@@ -52,7 +55,7 @@ const MapScoreLine = ({
   maps: MapScore[];
   teams: Match["teams"];
 }) => (
-  <div className="flex items-center gap-2.5 text-[11px] text-gray-500">
+  <div className="flex items-center gap-2 text-[10px] text-gray-500 sm:gap-2.5 sm:text-[11px]">
     {maps.map((map, i) => {
       const winnerIndex =
         map.status === "finished"
@@ -67,7 +70,7 @@ const MapScoreLine = ({
         <span key={map.mapNumber} className="flex items-center gap-1">
           {i > 0 && <span className="text-white/[0.06]">·</span>}
           {winnerLogo && (
-            <img src={winnerLogo} alt="" className="h-3.5 w-3.5" />
+            <img src={winnerLogo} alt="" className="hidden h-3.5 w-3.5 sm:block" />
           )}
           <span>{map.mapName}</span>
           <span
@@ -118,14 +121,14 @@ export const MatchCard = ({ match }: { match: Match }) => {
 
   return (
     <div
-      className={`rounded-lg border px-4 py-3 transition-colors ${cardStyle}`}
+      className={`rounded-lg border px-3 py-2.5 transition-colors sm:px-4 sm:py-3 ${cardStyle}`}
     >
-      <div className="flex items-center gap-4">
-        <div className="flex w-16 shrink-0 flex-col items-center gap-1">
-          <span className="text-xs text-gray-500">{formattedTime}</span>
+      <div className="flex items-center gap-2.5 sm:gap-4">
+        <div className="flex w-12 shrink-0 flex-col items-center gap-1 sm:w-16">
+          <span className="text-[11px] text-gray-500 sm:text-xs">{formattedTime}</span>
           <StatusBadge status={match.status} />
         </div>
-        <div className="flex-1 space-y-1.5">
+        <div className="min-w-0 flex-1 space-y-1 sm:space-y-1.5">
           {match.teams.map((team) => (
             <TeamRow
               key={team.name}
@@ -134,7 +137,7 @@ export const MatchCard = ({ match }: { match: Match }) => {
             />
           ))}
         </div>
-        <div className="shrink-0">
+        <div className="hidden shrink-0 sm:block">
           <span className="text-xs font-medium text-gray-500">
             {match.format}
           </span>

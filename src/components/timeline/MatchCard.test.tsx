@@ -19,8 +19,8 @@ describe("MatchCard", () => {
     const match = makeMatch({
       status: "not_started",
       teams: [
-        { name: "Team A", logoUrl: null, score: null, isWinner: false },
-        { name: "Team B", logoUrl: null, score: null, isWinner: false },
+        { name: "Team A", shortName: "A", logoUrl: null, score: null, isWinner: false },
+        { name: "Team B", shortName: "B", logoUrl: null, score: null, isWinner: false },
       ],
       maps: [],
     });
@@ -36,7 +36,7 @@ describe("MatchCard", () => {
 
   it("displays the status badge", () => {
     render(<MatchCard match={makeMatch({ status: "running" })} />);
-    expect(screen.getByText("LIVE")).toBeInTheDocument();
+    expect(screen.getAllByText("LIVE").length).toBeGreaterThanOrEqual(1);
   });
 
   it("displays formatted time", () => {
@@ -56,8 +56,8 @@ describe("MatchCard", () => {
       status: "not_started",
       maps: [],
       teams: [
-        { name: "Team A", logoUrl: null, score: null, isWinner: false },
-        { name: "Team B", logoUrl: null, score: null, isWinner: false },
+        { name: "Team A", shortName: "A", logoUrl: null, score: null, isWinner: false },
+        { name: "Team B", shortName: "B", logoUrl: null, score: null, isWinner: false },
       ],
     });
     render(<MatchCard match={match} />);

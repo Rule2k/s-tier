@@ -4,6 +4,7 @@ import type { GridSeriesState } from "@/lib/grid/types/seriesState";
 
 export const makeMatchTeam = (overrides: Partial<MatchTeam> = {}): MatchTeam => ({
   name: "Team Alpha",
+  shortName: "TA",
   logoUrl: "https://img.grid.gg/team-alpha.png",
   score: 2,
   isWinner: true,
@@ -28,6 +29,7 @@ export const makeMatch = (overrides: Partial<Match> = {}): Match => ({
     makeMatchTeam(),
     makeMatchTeam({
       name: "Team Bravo",
+      shortName: "TB",
       logoUrl: "https://img.grid.gg/team-bravo.png",
       score: 1,
       isWinner: false,
