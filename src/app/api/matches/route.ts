@@ -8,8 +8,10 @@ import {
   fetchTournamentSeries,
   fetchSeriesStates,
   buildTournament,
+  buildTournamentSummary,
   selectRelevantTournaments,
 } from "@/lib/grid/fetchTournaments";
+import { TOURNAMENT_IDS } from "@/config/tournaments";
 import type { Tournament, TournamentSummary } from "@/types/match";
 
 const getTournamentIndex = async (): Promise<TournamentSummary[]> => {
@@ -20,8 +22,14 @@ const getTournamentIndex = async (): Promise<TournamentSummary[]> => {
     console.error("Redis read failed for index:", error);
   }
 
-  // No Central fallback from app (rate limit) — return empty
-  return [];
+  // Fallback: fetch from Grid Central directly
+  const summaries: TournamentSummary[] = [];
+  for (const id of TOURNAMENT_IDS) {
+    const gridSeries = await fetchTournamentSeries(id);
+    const summary = buildTournamentSummary(id, gridSeries);
+    if (summary) summaries.push(summary);
+  }
+  return summaries;
 };
 
 const getCachedTournament = async (
@@ -86,13 +94,11 @@ const getDefaultTournaments = async (): Promise<Tournament[]> => {
 
   return tournaments
     .filter((t): t is Tournament => t !== null)
-    .sort(
-      (a, b) => {
-        const aFirst = a.matches[0]?.scheduledAt ?? "";
-        const bFirst = b.matches[0]?.scheduledAt ?? "";
-        return new Date(aFirst).getTime() - new Date(bFirst).getTime();
-      },
-    );
+    .sort((a, b) => {
+      const aFirst = a.matches[0]?.scheduledAt ?? "";
+      const bFirst = b.matches[0]?.scheduledAt ?? "";
+      return new Date(aFirst).getTime() - new Date(bFirst).getTime();
+    });
 };
 
 const getTournamentById = async (
