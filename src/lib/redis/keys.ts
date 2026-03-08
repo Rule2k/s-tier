@@ -1,20 +1,20 @@
+import type { Tournament } from "@/types/match";
+
 export const CACHE_KEYS = {
-  SERIES_INDEX: "series:index",
-  serieById: (id: string) => `series:${id}`,
+  TOURNAMENT_INDEX: "tournaments:index",
+  tournamentById: (id: string) => `tournament:${id}`,
+  matchState: (seriesId: string) => `match:state:${seriesId}`,
 } as const;
 
 export const CACHE_TTL = {
-  INDEX: 300,
-  RUNNING: 120,
-  PAST: 604_800,
-  MAX_FUTURE: 86_400,
+  INDEX: 300, // 5 min
+  TOURNAMENT_RUNNING: 60, // 1 min (at least one live match)
+  TOURNAMENT_PAST: 604_800, // 7 days (all matches finished)
+  MATCH_RUNNING: 60, // 1 min
+  MATCH_FINISHED: 604_800, // 7 days
 } as const;
 
-export const getSerieTtl = (serie: { beginAt: string; endAt: string }): number => {
-  const now = Date.now();
-  const begin = new Date(serie.beginAt).getTime();
-  const end = new Date(serie.endAt).getTime();
-  if (end < now) return CACHE_TTL.PAST;
-  if (begin <= now) return CACHE_TTL.RUNNING;
-  return Math.min(CACHE_TTL.MAX_FUTURE, Math.floor((begin - now) / 1000));
+export const getTournamentTtl = (tournament: Tournament): number => {
+  const hasRunning = tournament.matches.some((m) => m.status === "running");
+  return hasRunning ? CACHE_TTL.TOURNAMENT_RUNNING : CACHE_TTL.TOURNAMENT_PAST;
 };

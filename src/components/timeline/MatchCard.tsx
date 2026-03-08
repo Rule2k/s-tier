@@ -1,4 +1,4 @@
-import type { Match } from "@/types/match";
+import type { Match, MapScore } from "@/types/match";
 import { StatusBadge } from "./StatusBadge";
 import { format } from "date-fns";
 
@@ -14,8 +14,8 @@ const TeamRow = ({
       isFinished && !team.isWinner ? "opacity-40" : "text-white"
     }`}
   >
-    {team.imageUrl ? (
-      <img src={team.imageUrl} alt={team.name} className="h-6 w-6" />
+    {team.logoUrl ? (
+      <img src={team.logoUrl} alt={team.name} className="h-6 w-6" />
     ) : (
       <div className="h-6 w-6 rounded bg-gray-700" />
     )}
@@ -45,15 +45,30 @@ const ScoreRow = ({
   </div>
 );
 
+const MapScoreRow = ({ map }: { map: MapScore }) => (
+  <div className="flex items-center gap-2 text-[11px] text-gray-400">
+    <span className="w-16 truncate text-gray-500">{map.mapName}</span>
+    <span
+      className={
+        map.status === "running"
+          ? "text-yellow-400 font-semibold"
+          : "text-gray-300"
+      }
+    >
+      {map.scores[0]}–{map.scores[1]}
+    </span>
+  </div>
+);
+
 const cardStyleByStatus: Record<Match["status"], string> = {
-  running: "border-red-500/40 bg-red-500/[0.04] shadow-[0_0_15px_-3px] shadow-red-500/10",
+  running:
+    "border-red-500/40 bg-red-500/[0.04] shadow-[0_0_15px_-3px] shadow-red-500/10",
   not_started: "border-white/[0.06] bg-white/[0.02]",
   finished: "border-white/[0.04] bg-white/[0.01]",
-  canceled: "border-white/[0.04] bg-white/[0.01]",
-  postponed: "border-white/[0.04] bg-white/[0.01]",
 };
 
-const STARTING_SOON_STYLE = "border-blue-400/40 bg-blue-400/[0.04] shadow-[0_0_15px_-3px] shadow-blue-400/10";
+const STARTING_SOON_STYLE =
+  "border-blue-400/40 bg-blue-400/[0.04] shadow-[0_0_15px_-3px] shadow-blue-400/10";
 const ONE_HOUR_MS = 60 * 60 * 1000;
 
 const isStartingSoon = (match: Match): boolean => {
@@ -68,7 +83,13 @@ export const MatchCard = ({ match }: { match: Match }) => {
     : "--:--";
 
   const startingSoon = isStartingSoon(match);
-  const cardStyle = startingSoon ? STARTING_SOON_STYLE : cardStyleByStatus[match.status];
+  const cardStyle = startingSoon
+    ? STARTING_SOON_STYLE
+    : cardStyleByStatus[match.status];
+
+  const playedMaps = match.maps.filter(
+    (m) => m.status === "running" || m.status === "finished",
+  );
 
   return (
     <div
@@ -87,6 +108,13 @@ export const MatchCard = ({ match }: { match: Match }) => {
           />
         ))}
       </div>
+      {playedMaps.length > 0 && (
+        <div className="shrink-0 space-y-0.5">
+          {playedMaps.map((map) => (
+            <MapScoreRow key={map.mapNumber} map={map} />
+          ))}
+        </div>
+      )}
       <div className="shrink-0">
         <span className="text-xs font-medium text-gray-500">
           {match.format}

@@ -1,14 +1,14 @@
 "use client";
 
 import { useEffect, useMemo } from "react";
-import { useSeriesNavigation } from "@/hooks/useSeriesNavigation";
+import { useTournamentNavigation } from "@/hooks/useTournamentNavigation";
 import { TournamentTimeline } from "@/components/tournament/TournamentTimeline";
 import { Spinner } from "@/components/ui/Spinner";
 import { useTeamFilter } from "@/context/TeamFilterContext";
 
 export default function Home() {
   const {
-    series,
+    tournaments,
     isLoading,
     error,
     loadPrevious,
@@ -16,53 +16,48 @@ export default function Home() {
     hasPrevious,
     hasNext,
     loadingDirection,
-  } = useSeriesNavigation();
+  } = useTournamentNavigation();
   const { selectedTeam, setTeams } = useTeamFilter();
 
   const uniqueTeams = useMemo(() => {
-    if (!series.length) return [];
-    const teamMap = new Map<string, { acronym: string | null; imageUrl: string | null }>();
-    for (const serie of series) {
-      for (const stage of serie.stages) {
-        for (const match of stage.matches) {
-          for (const team of match.teams) {
-            if (!teamMap.has(team.name)) {
-              teamMap.set(team.name, { acronym: team.acronym, imageUrl: team.imageUrl });
-            }
+    if (!tournaments.length) return [];
+    const teamMap = new Map<string, { imageUrl: string | null }>();
+    for (const tournament of tournaments) {
+      for (const match of tournament.matches) {
+        for (const team of match.teams) {
+          if (!teamMap.has(team.name)) {
+            teamMap.set(team.name, { imageUrl: team.logoUrl });
           }
         }
       }
     }
-    return Array.from(teamMap, ([name, { acronym, imageUrl }]) => ({ name, acronym, imageUrl }))
+    return Array.from(teamMap, ([name, { imageUrl }]) => ({ name, imageUrl }))
       .sort((a, b) => a.name.localeCompare(b.name));
-  }, [series]);
+  }, [tournaments]);
 
   useEffect(() => {
     setTeams(uniqueTeams);
   }, [uniqueTeams, setTeams]);
 
-  const filteredSeries = useMemo(() => {
-    if (!series.length || !selectedTeam) return series;
-    return series
-      .map((serie) => ({
-        ...serie,
-        stages: serie.stages.map((stage) => ({
-          ...stage,
-          matches: stage.matches.filter((match) =>
-            match.teams.some((team) => team.name === selectedTeam),
-          ),
-        })),
+  const filteredTournaments = useMemo(() => {
+    if (!tournaments.length || !selectedTeam) return tournaments;
+    return tournaments
+      .map((tournament) => ({
+        ...tournament,
+        matches: tournament.matches.filter((match) =>
+          match.teams.some((team) => team.name === selectedTeam),
+        ),
       }))
-      .filter((serie) => serie.stages.some((stage) => stage.matches.length > 0));
-  }, [series, selectedTeam]);
+      .filter((tournament) => tournament.matches.length > 0);
+  }, [tournaments, selectedTeam]);
 
   if (isLoading) return <Spinner />;
   if (error) return <p className="text-red-400">Failed to load matches.</p>;
-  if (!series.length) return <p className="text-gray-500">No matches found.</p>;
+  if (!tournaments.length) return <p className="text-gray-500">No matches found.</p>;
 
   return (
     <TournamentTimeline
-      series={filteredSeries}
+      tournaments={filteredTournaments}
       onLoadPrevious={hasPrevious ? loadPrevious : undefined}
       onLoadNext={hasNext ? loadNext : undefined}
       loadingDirection={loadingDirection}

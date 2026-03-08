@@ -1,39 +1,119 @@
 import redis from "../src/lib/redis/client";
-import { CACHE_KEYS, CACHE_TTL, getSerieTtl } from "../src/lib/redis/keys";
+import { CACHE_KEYS, CACHE_TTL, getTournamentTtl } from "../src/lib/redis/keys";
+import { TOURNAMENT_IDS } from "../src/config/tournaments";
 import {
-  fetchSeriesIndex,
-  fetchSerieWithMatches,
-  selectRelevantSeries,
-} from "../src/lib/pandascore/fetchSeries";
+  fetchTournamentSeries,
+  fetchSeriesState,
+  buildTournament,
+  buildTournamentSummary,
+} from "../src/lib/grid/fetchTournaments";
+import type { GridSeriesState } from "../src/lib/grid/types/seriesState";
+import type { TournamentSummary } from "../src/types/match";
 
 const REFRESH_INTERVAL = 60_000; // 60 seconds
+const MAX_STATE_FETCHES_PER_CYCLE = 100;
 
-const refreshSeries = async () => {
+const refreshTournaments = async () => {
   try {
-    const pandaSeries = await fetchSeriesIndex();
-    await redis.set(CACHE_KEYS.SERIES_INDEX, JSON.stringify(pandaSeries), "EX", CACHE_TTL.INDEX);
-    console.log(`[worker] Cached index (${pandaSeries.length} series)`);
+    // Phase 1 — Fetch series index from Grid Central for each tournament
+    const tournamentIndex: TournamentSummary[] = [];
+    const allTournamentSeries = new Map<
+      string,
+      Awaited<ReturnType<typeof fetchTournamentSeries>>
+    >();
 
-    const relevant = selectRelevantSeries(pandaSeries, 5);
-    const results = await Promise.all(
-      relevant.map(async (pandaSerie) => {
-        const serie = await fetchSerieWithMatches(pandaSerie);
-        if (!serie) return null;
+    for (const tournamentId of TOURNAMENT_IDS) {
+      const gridSeries = await fetchTournamentSeries(tournamentId);
+      allTournamentSeries.set(tournamentId, gridSeries);
 
-        const ttl = getSerieTtl(serie);
-        await redis.set(CACHE_KEYS.serieById(serie.id), JSON.stringify(serie), "EX", ttl);
-        return serie;
-      }),
+      const summary = buildTournamentSummary(tournamentId, gridSeries);
+      if (summary) tournamentIndex.push(summary);
+    }
+
+    await redis.set(
+      CACHE_KEYS.TOURNAMENT_INDEX,
+      JSON.stringify(tournamentIndex),
+      "EX",
+      CACHE_TTL.INDEX,
+    );
+    console.log(
+      `[worker] Cached index (${tournamentIndex.length} tournaments)`,
     );
 
-    const cached = results.filter(Boolean);
-    console.log(`[worker] Cached ${cached.length} series individually`);
+    // Phase 2 — Fetch seriesState progressively (max ~100 per cycle)
+    const now = Date.now();
+    let stateFetchCount = 0;
+
+    for (const [tournamentId, gridSeriesList] of allTournamentSeries) {
+      const seriesStates = new Map<string, GridSeriesState>();
+
+      for (const gs of gridSeriesList) {
+        const scheduledTime = new Date(gs.startTimeScheduled).getTime();
+
+        // Skip future matches — no state to fetch
+        if (scheduledTime > now) continue;
+
+        // Check if we already have a finished state cached
+        const cachedRaw = await redis.get(CACHE_KEYS.matchState(gs.id));
+        if (cachedRaw) {
+          const cached: GridSeriesState = JSON.parse(cachedRaw);
+          seriesStates.set(gs.id, cached);
+          // Skip re-fetching if already finished
+          if (cached.finished) continue;
+        }
+
+        // Budget check
+        if (stateFetchCount >= MAX_STATE_FETCHES_PER_CYCLE) continue;
+
+        const state = await fetchSeriesState(gs.id);
+        stateFetchCount++;
+
+        if (state) {
+          seriesStates.set(gs.id, state);
+          const ttl = state.finished
+            ? CACHE_TTL.MATCH_FINISHED
+            : CACHE_TTL.MATCH_RUNNING;
+          await redis.set(
+            CACHE_KEYS.matchState(gs.id),
+            JSON.stringify(state),
+            "EX",
+            ttl,
+          );
+        }
+      }
+
+      // Phase 3 — Build and store complete tournament
+      const first = gridSeriesList[0];
+      if (!first) continue;
+
+      const tournament = buildTournament(
+        tournamentId,
+        first.tournament.name,
+        first.tournament.logoUrl || null,
+        gridSeriesList,
+        seriesStates,
+      );
+
+      const ttl = getTournamentTtl(tournament);
+      await redis.set(
+        CACHE_KEYS.tournamentById(tournamentId),
+        JSON.stringify(tournament),
+        "EX",
+        ttl,
+      );
+    }
+
+    console.log(
+      `[worker] Cached ${allTournamentSeries.size} tournaments (${stateFetchCount} state fetches)`,
+    );
   } catch (error) {
     console.error("[worker] Refresh failed:", error);
   }
 };
 
 // Run immediately on startup, then every minute
-refreshSeries();
-setInterval(refreshSeries, REFRESH_INTERVAL);
-console.log(`[worker] Started — refreshing every ${REFRESH_INTERVAL / 1000}s`);
+refreshTournaments();
+setInterval(refreshTournaments, REFRESH_INTERVAL);
+console.log(
+  `[worker] Started — refreshing every ${REFRESH_INTERVAL / 1000}s`,
+);

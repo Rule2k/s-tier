@@ -19,9 +19,10 @@ describe("MatchCard", () => {
     const match = makeMatch({
       status: "not_started",
       teams: [
-        { name: "Team A", acronym: "A", imageUrl: null, score: null, isWinner: false },
-        { name: "Team B", acronym: "B", imageUrl: null, score: null, isWinner: false },
+        { name: "Team A", logoUrl: null, score: null, isWinner: false },
+        { name: "Team B", logoUrl: null, score: null, isWinner: false },
       ],
+      maps: [],
     });
     render(<MatchCard match={match} />);
     const dashes = screen.getAllByText("-");
@@ -40,7 +41,26 @@ describe("MatchCard", () => {
 
   it("displays formatted time", () => {
     render(<MatchCard match={makeMatch({ scheduledAt: "2025-06-15T15:00:00Z" })} />);
-    // The displayed time depends on local timezone, so we just check it's rendered
     expect(screen.getByText(/\d{2}:\d{2}/)).toBeInTheDocument();
+  });
+
+  it("displays map scores for played maps", () => {
+    render(<MatchCard match={makeMatch()} />);
+    expect(screen.getByText("mirage")).toBeInTheDocument();
+    expect(screen.getByText("inferno")).toBeInTheDocument();
+    expect(screen.getByText("nuke")).toBeInTheDocument();
+  });
+
+  it("does not display map scores for not_started matches", () => {
+    const match = makeMatch({
+      status: "not_started",
+      maps: [],
+      teams: [
+        { name: "Team A", logoUrl: null, score: null, isWinner: false },
+        { name: "Team B", logoUrl: null, score: null, isWinner: false },
+      ],
+    });
+    render(<MatchCard match={match} />);
+    expect(screen.queryByText("mirage")).not.toBeInTheDocument();
   });
 });

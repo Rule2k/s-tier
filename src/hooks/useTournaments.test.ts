@@ -1,7 +1,7 @@
 import { renderHook, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useSeries } from "./useSeries";
-import { makeSerie } from "@/test/fixtures/matches";
+import { useTournaments } from "./useTournaments";
+import { makeTournament } from "@/test/fixtures/matches";
 import { createElement, type ReactNode } from "react";
 
 const createWrapper = () => {
@@ -12,22 +12,22 @@ const createWrapper = () => {
     createElement(QueryClientProvider, { client: queryClient }, children);
 };
 
-describe("useSeries", () => {
+describe("useTournaments", () => {
   afterEach(() => {
     vi.restoreAllMocks();
   });
 
-  it("fetches and returns series", async () => {
-    const series = [makeSerie()];
+  it("fetches and returns tournaments", async () => {
+    const tournaments = [makeTournament()];
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
       ok: true,
-      json: () => Promise.resolve(series),
+      json: () => Promise.resolve(tournaments),
     }));
 
-    const { result } = renderHook(() => useSeries(), { wrapper: createWrapper() });
+    const { result } = renderHook(() => useTournaments(), { wrapper: createWrapper() });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(result.current.data).toEqual(series);
+    expect(result.current.data).toEqual(tournaments);
 
     vi.unstubAllGlobals();
   });
@@ -38,7 +38,7 @@ describe("useSeries", () => {
       status: 500,
     }));
 
-    const { result } = renderHook(() => useSeries(), { wrapper: createWrapper() });
+    const { result } = renderHook(() => useTournaments(), { wrapper: createWrapper() });
 
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(result.current.error).toBeInstanceOf(Error);

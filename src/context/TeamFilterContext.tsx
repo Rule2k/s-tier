@@ -5,8 +5,8 @@ import { createContext, useContext, useState } from "react";
 interface TeamFilterContextValue {
   selectedTeam: string | null;
   setSelectedTeam: (team: string | null) => void;
-  teams: { name: string; acronym?: string | null; imageUrl: string | null }[];
-  setTeams: (teams: { name: string; acronym?: string | null; imageUrl: string | null }[]) => void;
+  teams: { name: string; imageUrl: string | null }[];
+  setTeams: (teams: { name: string; imageUrl: string | null }[]) => void;
 }
 
 const TeamFilterContext = createContext<TeamFilterContextValue>({

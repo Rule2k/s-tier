@@ -2,43 +2,41 @@ import { test, expect } from "@playwright/test";
 
 const today = new Date().toISOString();
 
-const mockSeries = [
+const mockTournaments = [
   {
-    id: "50",
+    id: "828791",
     name: "BLAST Premier Spring 2025",
-    leagueImageUrl: null,
-    tier: "s",
-    region: "EU",
-    beginAt: today,
-    endAt: today,
-    stages: [
+    logoUrl: null,
+    matches: [
       {
-        id: "100",
-        name: "Group Stage",
-        matches: [
+        id: "1",
+        status: "running",
+        scheduledAt: today,
+        format: "Bo3",
+        teams: [
+          { name: "Navi", logoUrl: null, score: 1, isWinner: false },
+          { name: "G2 Esports", logoUrl: null, score: 0, isWinner: false },
+        ],
+        maps: [
           {
-            id: "1",
-            status: "running",
-            scheduledAt: today,
-            format: "Bo3",
-            tournament: { id: "100", name: "Group Stage", tier: "s", slug: "group-stage", region: "EU" },
-            teams: [
-              { name: "Navi", acronym: "NAVI", imageUrl: null, score: 1, isWinner: false },
-              { name: "G2 Esports", acronym: "G2", imageUrl: null, score: 0, isWinner: false },
-            ],
-          },
-          {
-            id: "2",
-            status: "not_started",
-            scheduledAt: today,
-            format: "Bo3",
-            tournament: { id: "100", name: "Group Stage", tier: "s", slug: "group-stage", region: "EU" },
-            teams: [
-              { name: "FaZe Clan", acronym: "FAZE", imageUrl: null, score: null, isWinner: false },
-              { name: "Vitality", acronym: "VIT", imageUrl: null, score: null, isWinner: false },
-            ],
+            mapNumber: 1,
+            mapName: "mirage",
+            status: "finished",
+            scores: [13, 8],
+            sides: ["terrorists", "counter-terrorists"],
           },
         ],
+      },
+      {
+        id: "2",
+        status: "not_started",
+        scheduledAt: today,
+        format: "Bo3",
+        teams: [
+          { name: "FaZe Clan", logoUrl: null, score: null, isWinner: false },
+          { name: "Vitality", logoUrl: null, score: null, isWinner: false },
+        ],
+        maps: [],
       },
     ],
   },
@@ -49,7 +47,7 @@ test.beforeEach(async ({ page }) => {
     route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify(mockSeries),
+      body: JSON.stringify(mockTournaments),
     }),
   );
 });

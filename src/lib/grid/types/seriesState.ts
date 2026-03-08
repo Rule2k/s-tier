@@ -1,3 +1,16 @@
+export interface GridGameTeam {
+  score: number;
+  side: string;
+}
+
+export interface GridGame {
+  sequenceNumber: number;
+  started: boolean;
+  finished: boolean;
+  map: { name: string };
+  teams: GridGameTeam[];
+}
+
 export interface GridSeriesState {
   id: string;
   started: boolean;
@@ -7,6 +20,7 @@ export interface GridSeriesState {
     name: string;
     score: number;
   }[];
+  games: GridGame[];
 }
 
 export interface GridBatchSeriesStateResponse {

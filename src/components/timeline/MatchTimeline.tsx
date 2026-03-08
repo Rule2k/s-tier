@@ -11,8 +11,6 @@ const statusOrder: Record<Match["status"], number> = {
   finished: 0,
   running: 1,
   not_started: 2,
-  postponed: 3,
-  canceled: 4,
 };
 
 const sortByStatusThenTime = (matches: Match[]): Match[] =>

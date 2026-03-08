@@ -8,5 +8,17 @@ query SeriesState($id: ID!) {
       name
       score
     }
+    games {
+      sequenceNumber
+      started
+      finished
+      map {
+        name
+      }
+      teams {
+        score
+        side
+      }
+    }
   }
 }

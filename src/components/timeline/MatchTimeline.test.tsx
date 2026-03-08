@@ -9,12 +9,12 @@ describe("MatchTimeline", () => {
   it("renders date separators and match cards", () => {
     const matches = [
       makeMatch({ id: "1", scheduledAt: "2025-06-15T15:00:00Z", teams: [
-        { name: "Navi", acronym: "NAVI", imageUrl: null, score: 2, isWinner: true },
-        { name: "G2", acronym: "G2", imageUrl: null, score: 1, isWinner: false },
+        { name: "Navi", logoUrl: null, score: 2, isWinner: true },
+        { name: "G2", logoUrl: null, score: 1, isWinner: false },
       ]}),
       makeMatch({ id: "2", scheduledAt: "2025-06-15T18:00:00Z", teams: [
-        { name: "FaZe", acronym: "FAZE", imageUrl: null, score: 0, isWinner: false },
-        { name: "Vitality", acronym: "VIT", imageUrl: null, score: 2, isWinner: true },
+        { name: "FaZe", logoUrl: null, score: 0, isWinner: false },
+        { name: "Vitality", logoUrl: null, score: 2, isWinner: true },
       ]}),
     ];
 

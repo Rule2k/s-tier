@@ -19,18 +19,6 @@ const statusStyles: Record<MatchStatus, { label: string; dotColor: string; textC
     textColor: "text-gray-600",
     pulse: false,
   },
-  canceled: {
-    label: "CANCELED",
-    dotColor: "bg-gray-600",
-    textColor: "text-gray-600",
-    pulse: false,
-  },
-  postponed: {
-    label: "POSTPONED",
-    dotColor: "bg-yellow-500",
-    textColor: "text-yellow-500/70",
-    pulse: false,
-  },
 };
 
 export const StatusBadge = ({ status }: { status: MatchStatus }) => {

@@ -4,7 +4,6 @@ import { useState, useRef, useEffect } from "react";
 
 interface Team {
   name: string;
-  acronym?: string | null;
   imageUrl: string | null;
 }
 
@@ -22,8 +21,7 @@ export const TeamFilter = ({ teams, selectedTeam, onChange }: TeamFilterProps) =
   const filteredTeams = teams.filter((team) => {
     const query = search.toLowerCase();
     return (
-      team.name.toLowerCase().includes(query) ||
-      (team.acronym?.toLowerCase().includes(query) ?? false)
+      team.name.toLowerCase().includes(query)
     );
   });
 

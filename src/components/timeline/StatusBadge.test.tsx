@@ -7,8 +7,6 @@ describe("StatusBadge", () => {
     ["running", "LIVE"],
     ["not_started", "UPCOMING"],
     ["finished", "FINISHED"],
-    ["canceled", "CANCELED"],
-    ["postponed", "POSTPONED"],
   ];
 
   it.each(cases)("renders '%s' status as '%s'", (status, label) => {

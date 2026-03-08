@@ -3,9 +3,9 @@ import userEvent from "@testing-library/user-event";
 import { TeamFilter } from "./TeamFilter";
 
 const teams = [
-  { name: "Team Alpha", acronym: "TA", imageUrl: "https://img.example.com/alpha.png" },
-  { name: "Team Bravo", acronym: "TB", imageUrl: null },
-  { name: "Natus Vincere", acronym: "NAVI", imageUrl: "https://img.example.com/navi.png" },
+  { name: "Team Alpha", imageUrl: "https://img.example.com/alpha.png" },
+  { name: "Team Bravo", imageUrl: null },
+  { name: "Natus Vincere", imageUrl: "https://img.example.com/navi.png" },
 ];
 
 describe("TeamFilter", () => {
@@ -24,7 +24,7 @@ describe("TeamFilter", () => {
     const user = userEvent.setup();
     render(<TeamFilter teams={teams} selectedTeam={null} onChange={() => {}} />);
 
-    await user.type(screen.getByPlaceholderText("Filter by team..."), "navi");
+    await user.type(screen.getByPlaceholderText("Filter by team..."), "natus");
 
     expect(screen.getByText("Natus Vincere")).toBeInTheDocument();
     expect(screen.queryByText("Team Alpha")).not.toBeInTheDocument();
