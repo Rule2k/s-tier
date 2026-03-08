@@ -1,6 +1,6 @@
 # S-Tier
 
-CS2 match tracker that aggregates S-tier and A-tier tournament matches from PandaScore.
+CS2 match tracker that aggregates tournament matches from Grid API, with per-map round scores.
 
 ## Architecture
 
@@ -15,8 +15,8 @@ CS2 match tracker that aggregates S-tier and A-tier tournament matches from Pand
 └──────────────────────────────────────────┘
 ```
 
-- **app** — Next.js server. Reads matches from Redis cache, falls back to PandaScore if cache is empty.
-- **worker** — Background process. Fetches PandaScore every 60s and writes to Redis (TTL 120s).
+- **app** — Next.js server. Reads matches from Redis cache, falls back to Grid API if cache is empty.
+- **worker** — Background process. Fetches Grid API every 60s and writes to Redis.
 - **redis** — Cache layer. Not exposed externally, data persisted with a Docker volume.
 
 ## Getting Started
@@ -24,7 +24,7 @@ CS2 match tracker that aggregates S-tier and A-tier tournament matches from Pand
 ### Prerequisites
 
 - Docker and Docker Compose
-- PandaScore API key
+- Grid API key
 
 ### Setup
 
@@ -77,20 +77,21 @@ npm run dev
 
 | Variable | Description |
 |----------|-------------|
-| `PANDASCORE_API_KEY` | PandaScore API key |
+| `GRID_API_KEY` | Grid API key |
 | `REDIS_URL` | Redis connection URL (default: `redis://localhost:6379`) |
 
 ## Project Structure
 
 ```
 src/
-  app/api/matches/    API route (Redis-first, PandaScore fallback)
-  components/         React components
+  app/api/matches/         API route (Redis-first, Grid fallback)
+  app/api/tournament-index/ Tournament index endpoint
+  components/              React components
+  config/                  Tournament IDs whitelist
   lib/
-    pandascore/       PandaScore client, mappers, types
-    redis/            Redis client and cache constants
-    grid/             Grid API integration
-  types/              Shared TypeScript types
+    grid/                  Grid API clients, queries, mappers, types
+    redis/                 Redis client and cache constants
+  types/                   Shared TypeScript types
 worker/
-  refresh.ts          Background cache refresh script
+  refresh.ts               Background cache refresh script
 ```

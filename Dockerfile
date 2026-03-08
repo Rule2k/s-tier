@@ -28,7 +28,7 @@ ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 CMD ["node", "server.js"]
 
-# Stage 4: Background worker (refreshes Redis cache via PandaScore)
+# Stage 4: Background worker (refreshes Redis cache via Grid API)
 # No build step needed — tsx executes TypeScript directly
 FROM node:20-alpine AS worker
 WORKDIR /app
