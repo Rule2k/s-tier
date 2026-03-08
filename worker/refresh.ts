@@ -71,7 +71,7 @@ const refreshTournaments = async () => {
 
         if (state) {
           const status = state.finished ? "finished" : state.started ? "running" : "not_started";
-          const teams = gs.teams.map((t) => t.baseInfo.nameShortened).join(" vs ");
+          const teams = gs.teams.map((t) => t.baseInfo.nameShortened || t.baseInfo.name).join(" vs ");
           console.log(`[worker]   ${teams} (${gs.id}): ${status}`);
           seriesStates.set(gs.id, state);
           const ttl = state.finished
@@ -84,7 +84,7 @@ const refreshTournaments = async () => {
             ttl,
           );
         } else {
-          const teams = gs.teams.map((t) => t.baseInfo.nameShortened).join(" vs ");
+          const teams = gs.teams.map((t) => t.baseInfo.nameShortened || t.baseInfo.name).join(" vs ");
           console.warn(`[worker]   ${teams} (${gs.id}): state fetch returned null`);
         }
       }
