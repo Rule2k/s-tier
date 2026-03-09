@@ -1,40 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import redis from "@/lib/redis/client";
-import {
-  CACHE_KEYS,
-  getTournamentTtl,
-} from "@/lib/redis/keys";
+import { CACHE_KEYS, getTournamentTtl } from "@/lib/redis/keys";
 import {
   fetchTournamentSeries,
   fetchSeriesStates,
   buildTournament,
-  buildTournamentSummary,
   selectRelevantTournaments,
 } from "@/lib/grid/fetchTournaments";
-import { TOURNAMENT_IDS } from "@/config/tournaments";
-import type { Tournament, TournamentSummary } from "@/types/match";
+import { getTournamentIndex } from "@/lib/redis/getTournamentIndex";
+import type { Tournament } from "@/types/match";
 
-const getTournamentIndex = async (): Promise<TournamentSummary[]> => {
-  try {
-    const cached = await redis.get(CACHE_KEYS.TOURNAMENT_INDEX);
-    if (cached) return JSON.parse(cached);
-  } catch (error) {
-    console.error("Redis read failed for index:", error);
-  }
-
-  // Fallback: fetch from Grid Central directly
-  const summaries: TournamentSummary[] = [];
-  for (const id of TOURNAMENT_IDS) {
-    const gridSeries = await fetchTournamentSeries(id);
-    const summary = buildTournamentSummary(id, gridSeries);
-    if (summary) summaries.push(summary);
-  }
-  return summaries;
-};
-
-const getCachedTournament = async (
-  id: string,
-): Promise<Tournament | null> => {
+const getCachedTournament = async (id: string): Promise<Tournament | null> => {
   try {
     const cached = await redis.get(CACHE_KEYS.tournamentById(id));
     if (cached) return JSON.parse(cached);

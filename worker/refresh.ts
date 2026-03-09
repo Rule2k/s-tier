@@ -16,23 +16,28 @@ const ONE_HOUR_MS = 60 * 60 * 1000;
 
 const refreshTournaments = async () => {
   try {
-    // Phase 1 — Fetch series index from Grid Central for each tournament
+    // Phase 1 — Fetch series index from Grid Central (parallel)
+    const results = await Promise.all(
+      TOURNAMENT_IDS.map(async (id) => ({
+        id,
+        series: await fetchTournamentSeries(id),
+      })),
+    );
+
     const tournamentIndex: TournamentSummary[] = [];
     const allTournamentSeries = new Map<
       string,
       Awaited<ReturnType<typeof fetchTournamentSeries>>
     >();
 
-    for (const tournamentId of TOURNAMENT_IDS) {
-      const gridSeries = await fetchTournamentSeries(tournamentId);
-      allTournamentSeries.set(tournamentId, gridSeries);
-
-      const summary = buildTournamentSummary(tournamentId, gridSeries);
+    for (const { id, series } of results) {
+      allTournamentSeries.set(id, series);
+      const summary = buildTournamentSummary(id, series);
       if (summary) tournamentIndex.push(summary);
     }
 
     await redis.set(
-      CACHE_KEYS.TOURNAMENT_INDEX,
+      CACHE_KEYS.TOURNAMENTS_INDEX,
       JSON.stringify(tournamentIndex),
       "EX",
       CACHE_TTL.INDEX,
@@ -41,55 +46,80 @@ const refreshTournaments = async () => {
       `[worker] Cached index (${tournamentIndex.length} tournaments)`,
     );
 
-    // Phase 2 — Fetch seriesState progressively (max ~100 per cycle)
+    // Phase 2 — Collect candidates and fetch states in parallel
     const now = Date.now();
-    let stateFetchCount = 0;
+
+    // Per-tournament state maps (needed for Phase 3)
+    const tournamentStates = new Map<string, Map<string, GridSeriesState>>();
+
+    // First pass: check caches, collect candidates needing API fetch
+    type Candidate = {
+      tournamentId: string;
+      gs: Awaited<ReturnType<typeof fetchTournamentSeries>>[number];
+    };
+    const candidates: Candidate[] = [];
 
     for (const [tournamentId, gridSeriesList] of allTournamentSeries) {
       const seriesStates = new Map<string, GridSeriesState>();
+      tournamentStates.set(tournamentId, seriesStates);
 
       for (const gs of gridSeriesList) {
         const scheduledTime = new Date(gs.startTimeScheduled).getTime();
-
-        // Skip matches more than 1 hour in the future — unlikely to have started
         if (scheduledTime > now + ONE_HOUR_MS) continue;
 
-        // Check if we already have a finished state cached
         const cachedRaw = await redis.get(CACHE_KEYS.matchState(gs.id));
         if (cachedRaw) {
           const cached: GridSeriesState = JSON.parse(cachedRaw);
           seriesStates.set(gs.id, cached);
-          // Skip re-fetching if already finished
           if (cached.finished) continue;
         }
 
-        // Budget check
-        if (stateFetchCount >= MAX_STATE_FETCHES_PER_CYCLE) continue;
-
-        const state = await fetchSeriesState(gs.id);
-        stateFetchCount++;
-
-        if (state) {
-          const status = state.finished ? "finished" : state.started ? "running" : "not_started";
-          const teams = gs.teams.map((t) => t.baseInfo.nameShortened || t.baseInfo.name).join(" vs ");
-          console.log(`[worker]   ${teams} (${gs.id}): ${status}`);
-          seriesStates.set(gs.id, state);
-          const ttl = state.finished
-            ? CACHE_TTL.MATCH_FINISHED
-            : CACHE_TTL.MATCH_RUNNING;
-          await redis.set(
-            CACHE_KEYS.matchState(gs.id),
-            JSON.stringify(state),
-            "EX",
-            ttl,
-          );
-        } else {
-          const teams = gs.teams.map((t) => t.baseInfo.nameShortened || t.baseInfo.name).join(" vs ");
-          console.warn(`[worker]   ${teams} (${gs.id}): state fetch returned null`);
-        }
+        candidates.push({ tournamentId, gs });
       }
+    }
 
-      // Phase 3 — Build and store complete tournament
+    // Fetch all states in parallel (respecting budget)
+    const toFetch = candidates.slice(0, MAX_STATE_FETCHES_PER_CYCLE);
+    const fetched = await Promise.all(
+      toFetch.map(async ({ tournamentId, gs }) => {
+        const state = await fetchSeriesState(gs.id);
+        return { tournamentId, gs, state };
+      }),
+    );
+
+    // Process results
+    for (const { tournamentId, gs, state } of fetched) {
+      const seriesStates = tournamentStates.get(tournamentId)!;
+      const teams = gs.teams
+        .map((t) => t.baseInfo.nameShortened || t.baseInfo.name)
+        .join(" vs ");
+
+      if (state) {
+        const status = state.finished
+          ? "finished"
+          : state.started
+            ? "running"
+            : "not_started";
+        console.log(`[worker]   ${teams} (${gs.id}): ${status}`);
+        seriesStates.set(gs.id, state);
+        const ttl = state.finished
+          ? CACHE_TTL.MATCH_FINISHED
+          : CACHE_TTL.MATCH_RUNNING;
+        await redis.set(
+          CACHE_KEYS.matchState(gs.id),
+          JSON.stringify(state),
+          "EX",
+          ttl,
+        );
+      } else {
+        console.warn(
+          `[worker]   ${teams} (${gs.id}): state fetch returned null`,
+        );
+      }
+    }
+
+    // Phase 3 — Build and store complete tournaments
+    for (const [tournamentId, gridSeriesList] of allTournamentSeries) {
       const first = gridSeriesList[0];
       if (!first) continue;
 
@@ -98,7 +128,7 @@ const refreshTournaments = async () => {
         first.tournament.name,
         first.tournament.logoUrl || null,
         gridSeriesList,
-        seriesStates,
+        tournamentStates.get(tournamentId)!,
       );
 
       const ttl = getTournamentTtl(tournament);
@@ -111,7 +141,7 @@ const refreshTournaments = async () => {
     }
 
     console.log(
-      `[worker] Cached ${allTournamentSeries.size} tournaments (${stateFetchCount} state fetches)`,
+      `[worker] Cached ${allTournamentSeries.size} tournaments (${toFetch.length} state fetches)`,
     );
   } catch (error) {
     console.error("[worker] Refresh failed:", error);
@@ -121,6 +151,4 @@ const refreshTournaments = async () => {
 // Run immediately on startup, then every minute
 refreshTournaments();
 setInterval(refreshTournaments, REFRESH_INTERVAL);
-console.log(
-  `[worker] Started — refreshing every ${REFRESH_INTERVAL / 1000}s`,
-);
+console.log(`[worker] Started — refreshing every ${REFRESH_INTERVAL / 1000}s`);

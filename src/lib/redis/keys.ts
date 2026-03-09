@@ -1,7 +1,7 @@
 import type { Tournament } from "@/types/match";
 
 export const CACHE_KEYS = {
-  TOURNAMENT_INDEX: "tournaments:index",
+  TOURNAMENTS_INDEX: "tournaments:index",
   tournamentById: (id: string) => `tournament:${id}`,
   matchState: (seriesId: string) => `match:state:${seriesId}`,
 } as const;
