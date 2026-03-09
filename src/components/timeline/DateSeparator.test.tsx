@@ -19,10 +19,10 @@ describe("DateSeparator", () => {
   });
 
   it("displays formatted date for other dates", () => {
-    // Use a fixed date far enough from today
     const date = new Date("2024-03-15T12:00:00Z");
     render(<DateSeparator date={date} />);
-    // format: "EEEE, MMMM d" → e.g. "Friday, March 15"
-    expect(screen.getByText("Friday, March 15")).toBeInTheDocument();
+    // Main label: "March 15", sub label: "Friday"
+    expect(screen.getByText("March 15")).toBeInTheDocument();
+    expect(screen.getByText("Friday")).toBeInTheDocument();
   });
 });

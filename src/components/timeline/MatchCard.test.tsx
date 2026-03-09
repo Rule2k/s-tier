@@ -9,13 +9,12 @@ describe("MatchCard", () => {
     expect(screen.getByText("Team Bravo")).toBeInTheDocument();
   });
 
-  it("displays scores", () => {
+  it("displays combined score", () => {
     render(<MatchCard match={makeMatch()} />);
-    expect(screen.getByText("2")).toBeInTheDocument();
-    expect(screen.getByText("1")).toBeInTheDocument();
+    expect(screen.getByText("2 – 1")).toBeInTheDocument();
   });
 
-  it("displays dash when score is null", () => {
+  it("does not display score for not_started matches", () => {
     const match = makeMatch({
       status: "not_started",
       teams: [
@@ -25,8 +24,7 @@ describe("MatchCard", () => {
       maps: [],
     });
     render(<MatchCard match={match} />);
-    const dashes = screen.getAllByText("-");
-    expect(dashes).toHaveLength(2);
+    expect(screen.queryByText(/–/)).not.toBeInTheDocument();
   });
 
   it("displays the match format", () => {
@@ -36,7 +34,7 @@ describe("MatchCard", () => {
 
   it("displays the status badge", () => {
     render(<MatchCard match={makeMatch({ status: "running" })} />);
-    expect(screen.getAllByText("LIVE").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText("LIVE")).toBeInTheDocument();
   });
 
   it("displays formatted time", () => {
@@ -46,9 +44,9 @@ describe("MatchCard", () => {
 
   it("displays map scores for played maps", () => {
     render(<MatchCard match={makeMatch()} />);
-    expect(screen.getByText("mirage")).toBeInTheDocument();
-    expect(screen.getByText("inferno")).toBeInTheDocument();
-    expect(screen.getByText("nuke")).toBeInTheDocument();
+    expect(screen.getByText(/mirage/)).toBeInTheDocument();
+    expect(screen.getByText(/inferno/)).toBeInTheDocument();
+    expect(screen.getByText(/nuke/)).toBeInTheDocument();
   });
 
   it("does not display map scores for not_started matches", () => {
@@ -61,6 +59,6 @@ describe("MatchCard", () => {
       ],
     });
     render(<MatchCard match={match} />);
-    expect(screen.queryByText("mirage")).not.toBeInTheDocument();
+    expect(screen.queryByText(/mirage/)).not.toBeInTheDocument();
   });
 });

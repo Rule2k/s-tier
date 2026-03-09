@@ -57,6 +57,7 @@ export const MatchTimeline = ({ matches }: { matches: Match[] }) => {
           ref={dateKey === scrollToKey ? scrollRef : undefined}
         >
           <DateSeparator date={new Date(dateKey)} />
+
           <div className="space-y-2">
             {matchesByDate.get(dateKey)!.map((match) => (
               <MatchCard key={match.id} match={match} />

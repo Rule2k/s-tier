@@ -1,40 +1,25 @@
 import { isToday, isTomorrow, isYesterday, format } from "date-fns";
 
-const getLabel = (date: Date): string => {
-  if (isToday(date)) return "Today";
-  if (isTomorrow(date)) return "Tomorrow";
-  if (isYesterday(date)) return "Yesterday";
-  return format(date, "EEEE, MMMM d");
+const getLabel = (date: Date): { label: string; sub: string } => {
+  if (isToday(date)) return { label: "Today", sub: format(date, "MMMM d, yyyy") };
+  if (isTomorrow(date)) return { label: "Tomorrow", sub: format(date, "MMMM d, yyyy") };
+  if (isYesterday(date)) return { label: "Yesterday", sub: format(date, "MMMM d, yyyy") };
+  return { label: format(date, "MMMM d"), sub: format(date, "EEEE") };
 };
 
-export const DateSeparator = ({
-  date,
-  isLast = false,
-}: {
-  date: Date;
-  isLast?: boolean;
-}) => {
-  const today = isToday(date);
+export const DateSeparator = ({ date }: { date: Date }) => {
+  const { label, sub } = getLabel(date);
 
   return (
-    <div className="flex items-center gap-3 py-2">
-      <div className="relative flex flex-col items-center">
-        <div
-          className={`h-2 w-2 rounded-full ${
-            today ? "bg-green-400 shadow-[0_0_6px] shadow-green-400/50" : "bg-gray-600"
-          }`}
-        />
-        {!isLast && (
-          <div className="absolute top-2.5 w-px h-[calc(100%+2rem)] bg-gradient-to-b from-gray-700 to-transparent" />
-        )}
+    <div className="sticky top-[88px] max-sm:top-[80px] z-10 text-center max-sm:text-left max-sm:pl-[52px] py-3 bg-newsprint before:content-[''] before:absolute before:left-[20px] before:top-0 before:bottom-0 before:w-1.5 before:bg-newsprint before:-translate-x-1/2 before:-z-10 sm:before:left-1/2">
+      <div className="inline-block bg-newsprint px-5 py-1.5 border-2 border-rule">
+        <h3 className="font-serif text-lg font-bold tracking-[0.06em] uppercase leading-none">
+          {label}
+        </h3>
+        <small className="block font-mono text-[0.6rem] tracking-[0.12em] uppercase text-muted mt-0.5">
+          {sub}
+        </small>
       </div>
-      <span
-        className={`text-xs font-semibold ${
-          today ? "text-green-400" : "text-gray-500"
-        }`}
-      >
-        {getLabel(date)}
-      </span>
     </div>
   );
 };

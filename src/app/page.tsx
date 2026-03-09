@@ -52,8 +52,8 @@ export default function Home() {
   }, [tournaments, selectedTeam]);
 
   if (isLoading) return <Spinner />;
-  if (error) return <p className="text-red-400">Failed to load matches.</p>;
-  if (!tournaments.length) return <p className="text-gray-500">No matches found.</p>;
+  if (error) return <p className="text-live px-6 py-8">Failed to load matches.</p>;
+  if (!tournaments.length) return <p className="text-muted px-6 py-8">No matches found.</p>;
 
   return (
     <TournamentTimeline

@@ -1,13 +1,38 @@
 @import "tailwindcss";
 
 @theme inline {
-  --color-background: #030712;
-  --color-foreground: #f3f4f6;
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-background: #f5f0e8;
+  --color-foreground: #111;
+  --color-newsprint: #f5f0e8;
+  --color-newsprint-hover: #efe9df;
+  --color-live: #c41e1e;
+  --color-muted: #888;
+  --color-dim: #999;
+  --color-rule: #111;
+  --font-serif: Georgia, serif;
+  --font-mono: 'Courier Prime', 'Courier New', monospace;
+}
+
+@keyframes dot-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(196, 30, 30, 0.35); }
+  50% { box-shadow: 0 0 0 7px rgba(196, 30, 30, 0); }
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+@utility animate-blink {
+  animation: blink 1s step-end infinite;
+}
+
+@utility animate-dot-pulse {
+  animation: dot-pulse 1.5s ease-in-out infinite;
 }
 
 body {
   background: var(--color-background);
   color: var(--color-foreground);
 }
+

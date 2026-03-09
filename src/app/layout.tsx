@@ -1,17 +1,13 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Courier_Prime } from "next/font/google";
 import { QueryProvider } from "./providers";
 import { TeamFilterProvider } from "@/context/TeamFilterContext";
 import { Header } from "@/components/layout/Header";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const courierPrime = Courier_Prime({
+  variable: "--font-courier-prime",
+  weight: ["400", "700"],
   subsets: ["latin"],
 });
 
@@ -27,13 +23,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
+      <body className={`${courierPrime.variable} antialiased`}>
         <QueryProvider>
           <TeamFilterProvider>
             <Header />
-            <main className="mx-auto max-w-3xl px-4 py-6">{children}</main>
+            <main>{children}</main>
           </TeamFilterProvider>
         </QueryProvider>
       </body>

@@ -9,19 +9,19 @@ describe("MatchTimeline", () => {
   it("renders date separators and match cards", () => {
     const matches = [
       makeMatch({ id: "1", scheduledAt: "2025-06-15T15:00:00Z", teams: [
-        { name: "Navi", logoUrl: null, score: 2, isWinner: true },
-        { name: "G2", logoUrl: null, score: 1, isWinner: false },
+        { name: "Navi", shortName: "NAVI", logoUrl: null, score: 2, isWinner: true },
+        { name: "G2", shortName: "G2", logoUrl: null, score: 1, isWinner: false },
       ]}),
       makeMatch({ id: "2", scheduledAt: "2025-06-15T18:00:00Z", teams: [
-        { name: "FaZe", logoUrl: null, score: 0, isWinner: false },
-        { name: "Vitality", logoUrl: null, score: 2, isWinner: true },
+        { name: "FaZe", shortName: "FAZE", logoUrl: null, score: 0, isWinner: false },
+        { name: "Vitality", shortName: "VIT", logoUrl: null, score: 2, isWinner: true },
       ]}),
     ];
 
     render(<MatchTimeline matches={matches} />);
 
-    // Date separator should exist (Sunday, June 15)
-    expect(screen.getByText("Sunday, June 15")).toBeInTheDocument();
+    // Date separator: "June 15" as main label, "Sunday" as sub
+    expect(screen.getByText("June 15")).toBeInTheDocument();
 
     // Team names should be visible
     expect(screen.getByText("Navi")).toBeInTheDocument();
@@ -38,8 +38,8 @@ describe("MatchTimeline", () => {
 
     render(<MatchTimeline matches={matches} />);
 
-    expect(screen.getByText("Sunday, June 15")).toBeInTheDocument();
-    expect(screen.getByText("Monday, June 16")).toBeInTheDocument();
+    expect(screen.getByText("June 15")).toBeInTheDocument();
+    expect(screen.getByText("June 16")).toBeInTheDocument();
   });
 
   it("filters out matches without scheduledAt", () => {
@@ -50,8 +50,7 @@ describe("MatchTimeline", () => {
 
     render(<MatchTimeline matches={matches} />);
 
-    // Only one date group should render
-    expect(screen.getByText("Sunday, June 15")).toBeInTheDocument();
+    expect(screen.getByText("June 15")).toBeInTheDocument();
     expect(screen.getByText("Team Alpha")).toBeInTheDocument();
   });
 });

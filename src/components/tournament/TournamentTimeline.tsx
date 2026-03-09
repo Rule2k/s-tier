@@ -1,30 +1,36 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import type { Tournament } from "@/types/match";
+import type { Tournament, Match } from "@/types/match";
 import { TournamentBlock } from "./TournamentBlock";
 
-const findClosestDateKey = (tournaments: Tournament[]): string | null => {
-  const now = new Date();
-  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+/**
+ * Find the best match to scroll to:
+ * 1. First live match (running)
+ * 2. Closest match in time (past or future)
+ */
+const findScrollTargetMatch = (tournaments: Tournament[]): string | null => {
+  const allMatches = tournaments.flatMap((t) => t.matches);
+  const now = Date.now();
 
-  let closestDateKey: string | null = null;
+  // Priority 1: first live match
+  const liveMatch = allMatches.find((m) => m.status === "running");
+  if (liveMatch) return liveMatch.id;
+
+  // Priority 2: closest match in time
+  let closest: Match | null = null;
   let smallestDiff = Infinity;
 
-  for (const tournament of tournaments) {
-    for (const match of tournament.matches) {
-      if (!match.scheduledAt) continue;
-      const d = new Date(match.scheduledAt);
-      const dayKey = new Date(d.getFullYear(), d.getMonth(), d.getDate()).toISOString();
-      const diff = Math.abs(new Date(dayKey).getTime() - todayStart);
-      if (diff < smallestDiff) {
-        smallestDiff = diff;
-        closestDateKey = dayKey;
-      }
+  for (const match of allMatches) {
+    if (!match.scheduledAt) continue;
+    const diff = Math.abs(new Date(match.scheduledAt).getTime() - now);
+    if (diff < smallestDiff) {
+      smallestDiff = diff;
+      closest = match;
     }
   }
 
-  return closestDateKey;
+  return closest?.id ?? null;
 };
 
 const LoadButton = ({
@@ -40,11 +46,11 @@ const LoadButton = ({
     type="button"
     onClick={onClick}
     disabled={isLoading}
-    className="w-full py-3 text-sm font-medium text-gray-400 hover:text-white border border-white/[0.06] rounded-xl bg-white/[0.03] hover:bg-white/[0.06] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+    className="w-full py-3 font-mono text-sm font-bold uppercase tracking-wide text-foreground border-2 border-rule bg-newsprint hover:bg-newsprint-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
   >
     {isLoading ? (
       <span className="inline-flex items-center gap-2">
-        <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-gray-600 border-t-white" />
+        <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-dim border-t-rule" />
         Loading…
       </span>
     ) : (
@@ -67,42 +73,39 @@ export const TournamentTimeline = ({
   const scrollRef = useRef<HTMLDivElement>(null);
   const hasScrolled = useRef(false);
 
-  const scrollTargetDate = findClosestDateKey(tournaments);
+  const scrollMatchId = findScrollTargetMatch(tournaments);
 
   useEffect(() => {
     if (hasScrolled.current || !scrollRef.current) return;
-    const el = scrollRef.current;
-    const siteHeader = document.querySelector("header");
-    const tournamentHeader = el.closest("[data-tournament-block]")?.querySelector("[data-tournament-header]");
-    const siteHeaderHeight = siteHeader?.getBoundingClientRect().height ?? 57;
-    const tournamentHeaderHeight = tournamentHeader?.getBoundingClientRect().height ?? 0;
-    const offset = siteHeaderHeight + tournamentHeaderHeight + 8;
-    const top = el.getBoundingClientRect().top + window.scrollY - offset;
-    window.scrollTo({ top, behavior: "smooth" });
+    scrollRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
     hasScrolled.current = true;
   }, []);
 
   return (
-    <div className="space-y-5">
+    <div>
       {onLoadPrevious && (
-        <LoadButton onClick={onLoadPrevious} isLoading={loadingDirection === "previous"}>
-          Load earlier tournaments
-        </LoadButton>
+        <div className="px-6 mb-4">
+          <LoadButton onClick={onLoadPrevious} isLoading={loadingDirection === "previous"}>
+            Load earlier tournaments
+          </LoadButton>
+        </div>
       )}
 
       {tournaments.map((tournament) => (
         <TournamentBlock
           key={tournament.id}
           tournament={tournament}
-          scrollTargetDate={scrollTargetDate}
+          scrollMatchId={scrollMatchId}
           scrollRef={scrollRef}
         />
       ))}
 
       {onLoadNext && (
-        <LoadButton onClick={onLoadNext} isLoading={loadingDirection === "next"}>
-          Load later tournaments
-        </LoadButton>
+        <div className="px-6 mt-4">
+          <LoadButton onClick={onLoadNext} isLoading={loadingDirection === "next"}>
+            Load later tournaments
+          </LoadButton>
+        </div>
       )}
     </div>
   );
