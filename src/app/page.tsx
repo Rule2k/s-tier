@@ -5,6 +5,7 @@ import { useTournamentNavigation } from "@/hooks/useTournamentNavigation";
 import { TournamentTimeline } from "@/components/tournament/TournamentTimeline";
 import { Spinner } from "@/components/ui/Spinner";
 import { useTeamFilter } from "@/context/TeamFilterContext";
+import type { TournamentView } from "@/types/match";
 
 export default function Home() {
   const {
@@ -39,11 +40,12 @@ export default function Home() {
     setTeams(uniqueTeams);
   }, [uniqueTeams, setTeams]);
 
-  const filteredTournaments = useMemo(() => {
+  const filteredTournaments = useMemo<TournamentView[]>(() => {
     if (!tournaments.length || !selectedTeam) return tournaments;
     return tournaments
       .map((tournament) => ({
         ...tournament,
+        allMatches: tournament.matches,
         matches: tournament.matches.filter((match) =>
           match.teams.some((team) => team.name === selectedTeam),
         ),

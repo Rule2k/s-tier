@@ -81,6 +81,37 @@ describe("TournamentBlock", () => {
     expect(screen.getByText("Upcoming")).toBeInTheDocument();
   });
 
+  it("uses all tournament matches for the header status when visible matches are filtered", () => {
+    const filteredMatch = makeMatch({
+      id: "1",
+      status: "finished",
+      scheduledAt: "2025-06-15T15:00:00Z",
+      teams: [
+        { name: "Navi", shortName: "NAVI", logoUrl: "https://img.test/navi.png", score: 2, isWinner: true },
+        { name: "G2", shortName: "G2", logoUrl: null, score: 1, isWinner: false },
+      ],
+    });
+    const runningMatch = makeMatch({
+      id: "2",
+      status: "running",
+      scheduledAt: "2025-06-15T18:00:00Z",
+      teams: [
+        { name: "Spirit", shortName: "SPI", logoUrl: "https://img.test/spirit.png", score: 1, isWinner: false },
+        { name: "Vitality", shortName: "VIT", logoUrl: "https://img.test/vitality.png", score: 1, isWinner: false },
+      ],
+    });
+    const tournament = makeTournament({
+      matches: [filteredMatch],
+      allMatches: [filteredMatch, runningMatch],
+    });
+
+    render(<TournamentBlock tournament={tournament} />);
+
+    expect(screen.getByText("Live")).toBeInTheDocument();
+    expect(screen.queryByText("Finished")).not.toBeInTheDocument();
+    expect(screen.queryByText("Navi")).toBeInTheDocument();
+  });
+
   it("renders sticky date separators inside the tournament content", () => {
     const tournament = makeTournament({
       matches: [

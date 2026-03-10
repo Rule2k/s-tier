@@ -8,7 +8,7 @@ import {
   useState,
   type RefObject,
 } from "react";
-import type { Match, Tournament } from "@/types/match";
+import type { Match, TournamentView } from "@/types/match";
 import { MatchCard } from "@/components/timeline/MatchCard";
 import { DateSeparator } from "@/components/timeline/DateSeparator";
 import { formatDateRange } from "@/lib/matches/formatDateRange";
@@ -45,7 +45,7 @@ export const TournamentBlock = ({
   scrollTargetDate,
   scrollRef,
 }: {
-  tournament: Tournament;
+  tournament: TournamentView;
   scrollTargetDate?: string | null;
   scrollRef?: RefObject<HTMLDivElement | null>;
 }) => {
@@ -53,9 +53,10 @@ export const TournamentBlock = ({
   const headerRef = useRef<HTMLDivElement>(null);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [headerHeight, setHeaderHeight] = useState(0);
-  const status = useMemo(() => getTournamentStatus(tournament.matches), [tournament.matches]);
+  const headerMatches = tournament.allMatches ?? tournament.matches;
+  const status = useMemo(() => getTournamentStatus(headerMatches), [headerMatches]);
   const summary = useMemo(() => {
-    const scheduledMatches = tournament.matches
+    const scheduledMatches = headerMatches
       .filter((match) => Boolean(match.scheduledAt))
       .sort(
         (matchA, matchB) => new Date(matchA.scheduledAt).getTime() - new Date(matchB.scheduledAt).getTime(),
@@ -65,10 +66,10 @@ export const TournamentBlock = ({
     const lastMatch = scheduledMatches[scheduledMatches.length - 1]?.scheduledAt;
 
     return {
-      matchCount: tournament.matches.length,
+      matchCount: headerMatches.length,
       dateRange: firstMatch && lastMatch ? formatDateRange(firstMatch, lastMatch) : null,
     };
-  }, [tournament.matches]);
+  }, [headerMatches]);
 
   const matchesByDate = groupMatchesByDate(tournament.matches);
   const dateKeys = Array.from(matchesByDate.keys());

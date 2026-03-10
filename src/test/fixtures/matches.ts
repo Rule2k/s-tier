@@ -1,4 +1,4 @@
-import type { Match, Tournament, MapScore, MatchTeam, TournamentSummary } from "@/types/match";
+import type { Match, TournamentView, MapScore, MatchTeam, TournamentSummary } from "@/types/match";
 import type { GridSeries } from "@/lib/grid/types/series";
 import type { GridSeriesState } from "@/lib/grid/types/seriesState";
 
@@ -43,7 +43,7 @@ export const makeMatch = (overrides: Partial<Match> = {}): Match => ({
   ...overrides,
 });
 
-export const makeTournament = (overrides: Partial<Tournament> = {}): Tournament => ({
+export const makeTournament = (overrides: Partial<TournamentView> = {}): TournamentView => ({
   id: "828791",
   name: "ESL Pro League Season 23",
   logoUrl: "https://img.grid.gg/esl-pro-league.png",

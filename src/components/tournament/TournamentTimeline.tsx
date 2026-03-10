@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import type { Tournament } from "@/types/match";
+import type { TournamentView } from "@/types/match";
 import { TournamentBlock } from "./TournamentBlock";
 
-const findClosestDateKey = (tournaments: Tournament[]): string | null => {
+const findClosestDateKey = (tournaments: TournamentView[]): string | null => {
   const now = new Date();
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
 
@@ -59,7 +59,7 @@ export const TournamentTimeline = ({
   onLoadNext,
   loadingDirection,
 }: {
-  tournaments: Tournament[];
+  tournaments: TournamentView[];
   onLoadPrevious?: () => void;
   onLoadNext?: () => void;
   loadingDirection?: "previous" | "next" | null;

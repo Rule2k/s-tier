@@ -8,6 +8,10 @@ export interface Tournament {
   matches: Match[];
 }
 
+export interface TournamentView extends Tournament {
+  allMatches?: Match[];
+}
+
 // A Grid "Series" = one match (Bo1/Bo3/Bo5)
 export interface Match {
   id: string;
