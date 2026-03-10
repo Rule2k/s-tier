@@ -25,4 +25,12 @@ describe("DateSeparator", () => {
     // format: "EEEE, MMMM d" → e.g. "Friday, March 15"
     expect(screen.getByText("Friday, March 15")).toBeInTheDocument();
   });
+
+  it("can render as a sticky separator", () => {
+    const { container } = render(<DateSeparator date={new Date("2024-03-15T12:00:00Z")} sticky stickyTop="120px" />);
+    const separator = container.querySelector("[data-date-separator]");
+
+    expect(separator).toHaveClass("sticky");
+    expect(separator).toHaveStyle({ top: "120px" });
+  });
 });

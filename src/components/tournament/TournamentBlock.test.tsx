@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { TournamentBlock } from "./TournamentBlock";
 import { makeTournament, makeMatch } from "@/test/fixtures/matches";
 
@@ -34,8 +35,8 @@ describe("TournamentBlock", () => {
           status: "finished",
           scheduledAt: "2025-06-15T18:00:00Z",
           teams: [
-            { name: "Navi", logoUrl: "https://img.test/navi.png", score: 2, isWinner: true },
-            { name: "G2", logoUrl: null, score: 1, isWinner: false },
+            { name: "Navi", shortName: "NAVI", logoUrl: "https://img.test/navi.png", score: 2, isWinner: true },
+            { name: "G2", shortName: "G2", logoUrl: null, score: 1, isWinner: false },
           ],
         }),
       ],
@@ -78,5 +79,46 @@ describe("TournamentBlock", () => {
     });
     render(<TournamentBlock tournament={tournament} />);
     expect(screen.getByText("Upcoming")).toBeInTheDocument();
+  });
+
+  it("renders sticky date separators inside the tournament content", () => {
+    const tournament = makeTournament({
+      matches: [
+        makeMatch({ id: "1", scheduledAt: "2025-06-15T15:00:00Z" }),
+        makeMatch({ id: "2", scheduledAt: "2025-06-16T18:00:00Z" }),
+      ],
+    });
+
+    const { container } = render(<TournamentBlock tournament={tournament} />);
+    const separators = container.querySelectorAll("[data-date-separator]");
+
+    expect(separators).toHaveLength(2);
+    separators.forEach((separator) => {
+      expect(separator.className).toContain("sticky");
+    });
+  });
+
+  it("collapses the tournament content and keeps only the header visible", async () => {
+    const user = userEvent.setup();
+    const tournament = makeTournament({
+      matches: [
+        makeMatch({ id: "1", scheduledAt: "2025-06-15T15:00:00Z" }),
+        makeMatch({ id: "2", scheduledAt: "2025-06-16T18:00:00Z" }),
+      ],
+    });
+
+    const { container } = render(<TournamentBlock tournament={tournament} />);
+    const toggleButton = screen.getByRole("button", { name: /close esl pro league season 23/i });
+    const collapsedIndicator = container.querySelector("[data-collapsed-indicator]");
+
+    expect(toggleButton).toHaveAttribute("aria-expanded", "true");
+    expect(collapsedIndicator).toHaveClass("opacity-0");
+    expect(container.querySelectorAll(".rounded-lg.border")).toHaveLength(2);
+
+    await user.click(toggleButton);
+
+    expect(toggleButton).toHaveAttribute("aria-expanded", "false");
+    expect(collapsedIndicator).toHaveClass("opacity-100");
+    expect(container.querySelectorAll(".rounded-lg.border")).toHaveLength(0);
   });
 });
