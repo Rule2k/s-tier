@@ -27,25 +27,25 @@ export const DateSeparator = ({
       style={sticky && stickyTop ? { top: stickyTop } : undefined}
     >
       <div
-        className={`flex items-center gap-3 rounded-full border px-3 py-2 backdrop-blur-sm ${
+        className={`inline-flex items-center gap-2.5 rounded-full px-3 py-1.5 backdrop-blur-md ${
           sticky
-            ? "border-white/10 bg-gray-950/90 shadow-lg shadow-black/20"
-            : "border-transparent bg-transparent px-0 py-0 backdrop-blur-none"
+            ? "border border-white/10 bg-[rgba(5,10,20,0.78)] shadow-[0_12px_30px_rgba(0,0,0,0.28)]"
+            : "border border-transparent bg-transparent px-0 py-0 backdrop-blur-none"
         }`}
       >
         <div className="relative flex flex-col items-center">
           <div
             className={`h-2 w-2 rounded-full ${
-              today ? "bg-green-400 shadow-[0_0_6px] shadow-green-400/50" : "bg-gray-600"
+              today ? "bg-green-400 shadow-[0_0_8px] shadow-green-400/50" : "bg-gray-500"
             }`}
           />
           {!isLast && (
-            <div className="absolute top-2.5 h-[calc(100%+2rem)] w-px bg-gradient-to-b from-gray-700 to-transparent" />
+            <div className="absolute top-2.5 h-[calc(100%+2rem)] w-px bg-gradient-to-b from-white/18 to-transparent" />
           )}
         </div>
         <span
-          className={`text-xs font-semibold ${
-            today ? "text-green-400" : "text-gray-500"
+          className={`text-xs font-semibold tracking-[0.01em] ${
+            today ? "text-green-300" : "text-gray-400"
           }`}
         >
           {getLabel(date)}

@@ -96,24 +96,24 @@ export const TournamentBlock = ({
   return (
     <div
       data-tournament-block
-      className="overflow-clip rounded-2xl border border-white/[0.06] bg-white/[0.03] shadow-lg shadow-black/20"
+      className="overflow-clip rounded-[24px] border border-white/[0.07] bg-[linear-gradient(180deg,rgba(9,18,32,0.92),rgba(4,10,20,0.94))] shadow-[0_24px_80px_rgba(0,0,0,0.34)]"
     >
       <div
         ref={headerRef}
         data-tournament-header
-        className="sticky top-[57px] z-10 border-b border-white/[0.06] bg-gray-950/80 backdrop-blur-md"
+        className="sticky top-[57px] z-10 border-b border-white/[0.06] bg-[linear-gradient(90deg,rgba(255,255,255,0.06),rgba(255,255,255,0.01))] backdrop-blur-xl"
       >
-        <div className="bg-gradient-to-r from-white/[0.06] to-transparent px-5 py-4">
-          <div className="flex items-start gap-3">
+        <div className="px-5 py-3.5 sm:px-6">
+          <div className="flex items-center gap-3 sm:gap-4">
             {tournament.logoUrl && (
-              <img src={tournament.logoUrl} alt="" className="h-8 w-8 shrink-0 rounded object-contain" />
+              <img src={tournament.logoUrl} alt="" className="h-9 w-9 shrink-0 rounded-lg object-contain opacity-90" />
             )}
             <div className="min-w-0 flex-1">
-              <h3 className="truncate text-sm font-bold text-white">{tournament.name}</h3>
-              <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-gray-400">
+              <h3 className="truncate text-base font-semibold tracking-tight text-white sm:text-[1.08rem]">{tournament.name}</h3>
+              <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-gray-400">
                 {summary.dateRange && <span>{summary.dateRange}</span>}
                 {summary.dateRange && summary.matchCount > 0 && (
-                  <span className="h-1 w-1 rounded-full bg-gray-700" />
+                  <span className="h-1 w-1 rounded-full bg-white/12" />
                 )}
                 <span>
                   {summary.matchCount} {summary.matchCount > 1 ? "matches" : "match"}
@@ -121,9 +121,9 @@ export const TournamentBlock = ({
                 <span
                   data-collapsed-indicator
                   aria-hidden={!isCollapsed}
-                  className={`rounded-full border px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.18em] transition-opacity ${
+                  className={`rounded-full border px-2 py-0.5 text-[9px] font-medium uppercase tracking-[0.18em] transition-opacity ${
                     isCollapsed
-                      ? "border-white/10 bg-white/[0.04] text-gray-300 opacity-100"
+                      ? "border-white/10 bg-white/[0.05] text-gray-200 opacity-100"
                       : "border-transparent bg-transparent text-transparent opacity-0"
                   }`}
                 >
@@ -131,31 +131,31 @@ export const TournamentBlock = ({
                 </span>
               </div>
             </div>
-            <div className="flex shrink-0 items-center gap-3">
+            <div className="flex shrink-0 items-center gap-2 sm:gap-3">
               <div className="text-right">
                 {status.type === "live" && (
-                  <div>
-                    <span className="text-xs font-bold text-red-400">Live</span>
-                    <p className="mt-0.5 text-[10px] text-red-400/70">
+                  <div className="flex min-h-16 min-w-[6.25rem] flex-col items-center justify-center rounded-full border border-red-400/20 bg-red-500/[0.08] px-3 py-1.5 text-center">
+                    <span className="text-xs font-bold leading-none text-red-300">Live</span>
+                    <p className="mt-1 text-[10px] leading-none text-red-200/80">
                       {status.count} {status.count > 1 ? "matches" : "match"}
                     </p>
                   </div>
                 )}
                 {status.type === "in_progress" && (
-                  <span className="text-xs font-semibold text-blue-400">In Progress</span>
+                  <span className="rounded-full border border-blue-400/15 bg-blue-400/[0.08] px-3 py-1.5 text-xs font-semibold text-blue-200">In Progress</span>
                 )}
                 {status.type === "upcoming" && (
-                  <span className="text-xs font-semibold text-gray-500">Upcoming</span>
+                  <span className="rounded-full border border-white/8 bg-white/[0.03] px-3 py-1.5 text-xs font-semibold text-gray-400">Upcoming</span>
                 )}
                 {status.type === "finished" && (
-                  <div>
-                    <span className="text-xs font-semibold text-gray-500">Finished</span>
+                  <div className="rounded-full border border-white/8 bg-white/[0.03] px-3 py-1.5">
+                    <span className="text-[11px] font-semibold text-gray-400">Finished</span>
                     {status.winner && (
                       <div className="mt-0.5 flex items-center justify-end gap-1.5">
                         {status.winner.logoUrl && (
                           <img src={status.winner.logoUrl} alt="" className="h-4 w-4 rounded object-contain" />
                         )}
-                        <span className="text-[11px] text-white">{status.winner.name}</span>
+                        <span className="text-[11px] font-medium text-white">{status.winner.name}</span>
                       </div>
                     )}
                   </div>
@@ -167,7 +167,7 @@ export const TournamentBlock = ({
                 aria-controls={contentId}
                 aria-label={isCollapsed ? `Open ${tournament.name}` : `Close ${tournament.name}`}
                 onClick={() => setIsCollapsed((collapsed) => !collapsed)}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-gray-300 transition-colors hover:border-white/20 hover:bg-white/[0.08] hover:text-white"
+                className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-black/20 text-gray-300 transition-colors hover:border-white/20 hover:bg-white/[0.08] hover:text-white"
               >
                 <svg
                   viewBox="0 0 20 20"
