@@ -1,14 +1,15 @@
 import redis from "../src/lib/redis/client";
 import { CACHE_KEYS, CACHE_TTL, getTournamentTtl } from "../src/lib/redis/keys";
 import { TOURNAMENT_IDS } from "../src/config/tournaments";
-import { buildTournamentSummary } from "../src/lib/tournaments/buildTournamentSummary";
+import { getSeriesStateStatus } from "../src/lib/grid/getSeriesStateStatus";
+import { getSeriesTeamsLabel } from "../src/lib/grid/getSeriesTeamsLabel";
 import {
-  fetchTournamentSeries,
   fetchSeriesState,
   buildTournament,
 } from "../src/lib/grid/fetchTournaments";
+import type { GridSeries } from "../src/lib/grid/types/series";
+import { fetchTournamentSeriesIndex } from "../src/lib/tournaments/fetchTournamentSeriesIndex";
 import type { GridSeriesState } from "../src/lib/grid/types/seriesState";
-import type { TournamentSummary } from "../src/types/match";
 
 const REFRESH_INTERVAL = 60_000; // 60 seconds
 const MAX_STATE_FETCHES_PER_CYCLE = 100;
@@ -16,25 +17,10 @@ const ONE_HOUR_MS = 60 * 60 * 1000;
 
 const refreshTournaments = async () => {
   try {
-    // Phase 1 — Fetch series index from Grid Central (parallel)
-    const results = await Promise.all(
-      TOURNAMENT_IDS.map(async (id) => ({
-        id,
-        series: await fetchTournamentSeries(id),
-      })),
-    );
-
-    const tournamentIndex: TournamentSummary[] = [];
-    const allTournamentSeries = new Map<
-      string,
-      Awaited<ReturnType<typeof fetchTournamentSeries>>
-    >();
-
-    for (const { id, series } of results) {
-      allTournamentSeries.set(id, series);
-      const summary = buildTournamentSummary(id, series);
-      if (summary) tournamentIndex.push(summary);
-    }
+    const {
+      summaries: tournamentIndex,
+      seriesByTournamentId: allTournamentSeries,
+    } = await fetchTournamentSeriesIndex(TOURNAMENT_IDS);
 
     await redis.set(
       CACHE_KEYS.TOURNAMENTS_INDEX,
@@ -55,7 +41,7 @@ const refreshTournaments = async () => {
     // First pass: check caches, collect candidates needing API fetch
     type Candidate = {
       tournamentId: string;
-      gs: Awaited<ReturnType<typeof fetchTournamentSeries>>[number];
+      gs: GridSeries;
     };
     const candidates: Candidate[] = [];
 
@@ -90,16 +76,10 @@ const refreshTournaments = async () => {
     // Process results
     for (const { tournamentId, gs, state } of fetched) {
       const seriesStates = tournamentStates.get(tournamentId)!;
-      const teams = gs.teams
-        .map((t) => t.baseInfo.nameShortened || t.baseInfo.name)
-        .join(" vs ");
+      const teams = getSeriesTeamsLabel(gs);
 
       if (state) {
-        const status = state.finished
-          ? "finished"
-          : state.started
-            ? "running"
-            : "not_started";
+        const status = getSeriesStateStatus(state);
         console.log(`[worker]   ${teams} (${gs.id}): ${status}`);
         seriesStates.set(gs.id, state);
         const ttl = state.finished

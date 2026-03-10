@@ -1,10 +1,7 @@
 import redis from "@/lib/redis/client";
 import { CACHE_KEYS } from "@/lib/redis/keys";
 import { TOURNAMENT_IDS } from "@/config/tournaments";
-import { buildTournamentSummary } from "@/lib/tournaments/buildTournamentSummary";
-import {
-  fetchTournamentSeries,
-} from "@/lib/grid/fetchTournaments";
+import { fetchTournamentSeriesIndex } from "@/lib/tournaments/fetchTournamentSeriesIndex";
 import type { TournamentSummary } from "@/types/match";
 
 export const getTournamentIndex = async (): Promise<TournamentSummary[]> => {
@@ -15,12 +12,6 @@ export const getTournamentIndex = async (): Promise<TournamentSummary[]> => {
     console.error("Redis read failed for tournament index:", error);
   }
 
-  // Fallback: fetch from Grid Central directly
-  const summaries: TournamentSummary[] = [];
-  for (const id of TOURNAMENT_IDS) {
-    const gridSeries = await fetchTournamentSeries(id);
-    const summary = buildTournamentSummary(id, gridSeries);
-    if (summary) summaries.push(summary);
-  }
+  const { summaries } = await fetchTournamentSeriesIndex(TOURNAMENT_IDS);
   return summaries;
 };
