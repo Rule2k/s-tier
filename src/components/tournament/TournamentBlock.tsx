@@ -8,36 +8,54 @@ import {
   useState,
   type RefObject,
 } from "react";
-import type { Match, TournamentView } from "@/types/match";
-import { MatchCard } from "@/components/timeline/MatchCard";
 import { DateSeparator } from "@/components/timeline/DateSeparator";
-import { formatDateRange } from "@/lib/matches/formatDateRange";
+import { MatchCard } from "@/components/timeline/MatchCard";
 import { groupMatchesByDate } from "@/lib/matches/groupByDate";
+import { getTournamentStatus, type TournamentStatus } from "@/lib/tournaments/getTournamentStatus";
+import { getTournamentSummary } from "@/lib/tournaments/getTournamentSummary";
+import type { TournamentView } from "@/types/match";
 
-type TournamentStatus =
-  | { type: "finished"; winner: { name: string; logoUrl: string | null } | null }
-  | { type: "live"; count: number }
-  | { type: "in_progress" }
-  | { type: "upcoming" };
-
-const getTournamentStatus = (matches: Match[]): TournamentStatus => {
-  const liveMatches = matches.filter((match) => match.status === "running");
-  if (liveMatches.length > 0) return { type: "live", count: liveMatches.length };
-
-  const hasFinished = matches.some((match) => match.status === "finished");
-  const hasUpcoming = matches.some((match) => match.status === "not_started");
-
-  if (hasFinished && !hasUpcoming) {
-    const lastMatch = [...matches]
-      .sort((matchA, matchB) => new Date(matchB.scheduledAt).getTime() - new Date(matchA.scheduledAt).getTime())[0];
-    const winnerTeam = lastMatch?.teams.find((team) => team.isWinner) ?? null;
-    const winner = winnerTeam ? { name: winnerTeam.name, logoUrl: winnerTeam.logoUrl } : null;
-    return { type: "finished", winner };
+const TournamentStatusBadge = ({ status }: { status: TournamentStatus }) => {
+  if (status.type === "live") {
+    return (
+      <div className="flex min-h-16 min-w-[6.25rem] flex-col items-center justify-center rounded-full border border-red-400/20 bg-red-500/[0.08] px-3 py-1.5 text-center">
+        <span className="text-xs font-bold leading-none text-red-300">Live</span>
+        <p className="mt-1 text-[10px] leading-none text-red-200/80">
+          {status.count} {status.count > 1 ? "matches" : "match"}
+        </p>
+      </div>
+    );
   }
 
-  if (hasFinished) return { type: "in_progress" };
+  if (status.type === "in_progress") {
+    return (
+      <span className="rounded-full border border-blue-400/15 bg-blue-400/[0.08] px-3 py-1.5 text-xs font-semibold text-blue-200">
+        In Progress
+      </span>
+    );
+  }
 
-  return { type: "upcoming" };
+  if (status.type === "upcoming") {
+    return (
+      <span className="rounded-full border border-white/8 bg-white/[0.03] px-3 py-1.5 text-xs font-semibold text-gray-400">
+        Upcoming
+      </span>
+    );
+  }
+
+  return (
+    <div className="rounded-full border border-white/8 bg-white/[0.03] px-3 py-1.5">
+      <span className="text-[11px] font-semibold text-gray-400">Finished</span>
+      {status.winner && (
+        <div className="mt-0.5 flex items-center justify-end gap-1.5">
+          {status.winner.logoUrl && (
+            <img src={status.winner.logoUrl} alt="" className="h-4 w-4 rounded object-contain" />
+          )}
+          <span className="text-[11px] font-medium text-white">{status.winner.name}</span>
+        </div>
+      )}
+    </div>
+  );
 };
 
 export const TournamentBlock = ({
@@ -53,23 +71,10 @@ export const TournamentBlock = ({
   const headerRef = useRef<HTMLDivElement>(null);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [headerHeight, setHeaderHeight] = useState(0);
+
   const headerMatches = tournament.allMatches ?? tournament.matches;
   const status = useMemo(() => getTournamentStatus(headerMatches), [headerMatches]);
-  const summary = useMemo(() => {
-    const scheduledMatches = headerMatches
-      .filter((match) => Boolean(match.scheduledAt))
-      .sort(
-        (matchA, matchB) => new Date(matchA.scheduledAt).getTime() - new Date(matchB.scheduledAt).getTime(),
-      );
-
-    const firstMatch = scheduledMatches[0]?.scheduledAt;
-    const lastMatch = scheduledMatches[scheduledMatches.length - 1]?.scheduledAt;
-
-    return {
-      matchCount: headerMatches.length,
-      dateRange: firstMatch && lastMatch ? formatDateRange(firstMatch, lastMatch) : null,
-    };
-  }, [headerMatches]);
+  const summary = useMemo(() => getTournamentSummary(headerMatches), [headerMatches]);
 
   const matchesByDate = groupMatchesByDate(tournament.matches);
   const dateKeys = Array.from(matchesByDate.keys());
@@ -108,8 +113,11 @@ export const TournamentBlock = ({
             {tournament.logoUrl && (
               <img src={tournament.logoUrl} alt="" className="h-9 w-9 shrink-0 rounded-lg object-contain opacity-90" />
             )}
+
             <div className="min-w-0 flex-1">
-              <h3 className="truncate text-base font-semibold tracking-tight text-white sm:text-[1.08rem]">{tournament.name}</h3>
+              <h3 className="truncate text-base font-semibold tracking-tight text-white sm:text-[1.08rem]">
+                {tournament.name}
+              </h3>
               <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-gray-400">
                 {summary.dateRange && <span>{summary.dateRange}</span>}
                 {summary.dateRange && summary.matchCount > 0 && (
@@ -131,35 +139,10 @@ export const TournamentBlock = ({
                 </span>
               </div>
             </div>
+
             <div className="flex shrink-0 items-center gap-2 sm:gap-3">
               <div className="text-right">
-                {status.type === "live" && (
-                  <div className="flex min-h-16 min-w-[6.25rem] flex-col items-center justify-center rounded-full border border-red-400/20 bg-red-500/[0.08] px-3 py-1.5 text-center">
-                    <span className="text-xs font-bold leading-none text-red-300">Live</span>
-                    <p className="mt-1 text-[10px] leading-none text-red-200/80">
-                      {status.count} {status.count > 1 ? "matches" : "match"}
-                    </p>
-                  </div>
-                )}
-                {status.type === "in_progress" && (
-                  <span className="rounded-full border border-blue-400/15 bg-blue-400/[0.08] px-3 py-1.5 text-xs font-semibold text-blue-200">In Progress</span>
-                )}
-                {status.type === "upcoming" && (
-                  <span className="rounded-full border border-white/8 bg-white/[0.03] px-3 py-1.5 text-xs font-semibold text-gray-400">Upcoming</span>
-                )}
-                {status.type === "finished" && (
-                  <div className="rounded-full border border-white/8 bg-white/[0.03] px-3 py-1.5">
-                    <span className="text-[11px] font-semibold text-gray-400">Finished</span>
-                    {status.winner && (
-                      <div className="mt-0.5 flex items-center justify-end gap-1.5">
-                        {status.winner.logoUrl && (
-                          <img src={status.winner.logoUrl} alt="" className="h-4 w-4 rounded object-contain" />
-                        )}
-                        <span className="text-[11px] font-medium text-white">{status.winner.name}</span>
-                      </div>
-                    )}
-                  </div>
-                )}
+                <TournamentStatusBadge status={status} />
               </div>
               <button
                 type="button"

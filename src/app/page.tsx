@@ -5,6 +5,8 @@ import { useTournamentNavigation } from "@/hooks/useTournamentNavigation";
 import { TournamentTimeline } from "@/components/tournament/TournamentTimeline";
 import { Spinner } from "@/components/ui/Spinner";
 import { useTeamFilter } from "@/context/TeamFilterContext";
+import { getUniqueTeams } from "@/lib/teams/getUniqueTeams";
+import { filterTournamentsByTeam } from "@/lib/tournaments/filterTournamentsByTeam";
 import type { TournamentView } from "@/types/match";
 
 export default function Home() {
@@ -20,38 +22,16 @@ export default function Home() {
   } = useTournamentNavigation();
   const { selectedTeam, setTeams } = useTeamFilter();
 
-  const uniqueTeams = useMemo(() => {
-    if (!tournaments.length) return [];
-    const teamMap = new Map<string, { imageUrl: string | null }>();
-    for (const tournament of tournaments) {
-      for (const match of tournament.matches) {
-        for (const team of match.teams) {
-          if (!teamMap.has(team.name)) {
-            teamMap.set(team.name, { imageUrl: team.logoUrl });
-          }
-        }
-      }
-    }
-    return Array.from(teamMap, ([name, { imageUrl }]) => ({ name, imageUrl }))
-      .sort((a, b) => a.name.localeCompare(b.name));
-  }, [tournaments]);
+  const uniqueTeams = useMemo(() => getUniqueTeams(tournaments), [tournaments]);
 
   useEffect(() => {
     setTeams(uniqueTeams);
   }, [uniqueTeams, setTeams]);
 
-  const filteredTournaments = useMemo<TournamentView[]>(() => {
-    if (!tournaments.length || !selectedTeam) return tournaments;
-    return tournaments
-      .map((tournament) => ({
-        ...tournament,
-        allMatches: tournament.matches,
-        matches: tournament.matches.filter((match) =>
-          match.teams.some((team) => team.name === selectedTeam),
-        ),
-      }))
-      .filter((tournament) => tournament.matches.length > 0);
-  }, [tournaments, selectedTeam]);
+  const filteredTournaments = useMemo(
+    () => filterTournamentsByTeam(tournaments, selectedTeam),
+    [tournaments, selectedTeam],
+  );
 
   if (isLoading) return <Spinner />;
   if (error) return <p className="text-red-400">Failed to load matches.</p>;

@@ -23,7 +23,7 @@ describe("TournamentBlock", () => {
       ],
     });
     const { container } = render(<TournamentBlock tournament={tournament} />);
-    expect(container.querySelectorAll(".rounded-lg.border")).toHaveLength(2);
+    expect(container.querySelectorAll("[data-match-card]")).toHaveLength(2);
   });
 
   it("shows 'Finished' with winner when all matches are done", () => {
@@ -144,12 +144,12 @@ describe("TournamentBlock", () => {
 
     expect(toggleButton).toHaveAttribute("aria-expanded", "true");
     expect(collapsedIndicator).toHaveClass("opacity-0");
-    expect(container.querySelectorAll(".rounded-lg.border")).toHaveLength(2);
+    expect(container.querySelectorAll("[data-match-card]")).toHaveLength(2);
 
     await user.click(toggleButton);
 
     expect(toggleButton).toHaveAttribute("aria-expanded", "false");
     expect(collapsedIndicator).toHaveClass("opacity-100");
-    expect(container.querySelectorAll(".rounded-lg.border")).toHaveLength(0);
+    expect(container.querySelectorAll("[data-match-card]")).toHaveLength(0);
   });
 });
