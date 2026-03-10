@@ -11,7 +11,8 @@ vi.mock("@/lib/grid/fetchTournaments", () => ({
   fetchTournamentSeries: vi.fn(),
   fetchSeriesStates: vi.fn(),
   buildTournament: vi.fn(),
-  buildTournamentSummary: vi.fn(),
+}));
+vi.mock("@/lib/tournaments/selectRelevantTournaments", () => ({
   selectRelevantTournaments: vi.fn(),
 }));
 
@@ -21,7 +22,7 @@ vi.mock("@/config/tournaments", () => ({
 
 import {
   selectRelevantTournaments,
-} from "@/lib/grid/fetchTournaments";
+} from "@/lib/tournaments/selectRelevantTournaments";
 
 const makeRequest = (params?: Record<string, string>) => {
   const url = new URL("http://localhost/api/matches");
@@ -56,8 +57,8 @@ describe("GET /api/matches", () => {
       const response = await GET(makeRequest());
       const data = await response.json();
 
-      // Returns empty array since no Central fallback from app
-      expect(data).toEqual([]);
+      expect(response.status).toBe(500);
+      expect(data).toEqual({ error: "Failed to fetch tournaments" });
     });
   });
 

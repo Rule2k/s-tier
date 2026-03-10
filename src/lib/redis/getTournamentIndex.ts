@@ -1,9 +1,9 @@
 import redis from "@/lib/redis/client";
 import { CACHE_KEYS } from "@/lib/redis/keys";
 import { TOURNAMENT_IDS } from "@/config/tournaments";
+import { buildTournamentSummary } from "@/lib/tournaments/buildTournamentSummary";
 import {
   fetchTournamentSeries,
-  buildTournamentSummary,
 } from "@/lib/grid/fetchTournaments";
 import type { TournamentSummary } from "@/types/match";
 

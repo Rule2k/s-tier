@@ -5,9 +5,10 @@ import {
   fetchTournamentSeries,
   fetchSeriesStates,
   buildTournament,
-  selectRelevantTournaments,
 } from "@/lib/grid/fetchTournaments";
 import { getTournamentIndex } from "@/lib/redis/getTournamentIndex";
+import { selectRelevantTournaments } from "@/lib/tournaments/selectRelevantTournaments";
+import { sortTournamentsByStartDate } from "@/lib/tournaments/sortTournamentsByStartDate";
 import type { Tournament } from "@/types/match";
 
 const getCachedTournament = async (id: string): Promise<Tournament | null> => {
@@ -68,13 +69,9 @@ const getDefaultTournaments = async (): Promise<Tournament[]> => {
     }),
   );
 
-  return tournaments
-    .filter((t): t is Tournament => t !== null)
-    .sort((a, b) => {
-      const aFirst = a.matches[0]?.scheduledAt ?? "";
-      const bFirst = b.matches[0]?.scheduledAt ?? "";
-      return new Date(aFirst).getTime() - new Date(bFirst).getTime();
-    });
+  return sortTournamentsByStartDate(
+    tournaments.filter((t): t is Tournament => t !== null),
+  );
 };
 
 const getTournamentById = async (

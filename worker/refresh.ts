@@ -1,11 +1,11 @@
 import redis from "../src/lib/redis/client";
 import { CACHE_KEYS, CACHE_TTL, getTournamentTtl } from "../src/lib/redis/keys";
 import { TOURNAMENT_IDS } from "../src/config/tournaments";
+import { buildTournamentSummary } from "../src/lib/tournaments/buildTournamentSummary";
 import {
   fetchTournamentSeries,
   fetchSeriesState,
   buildTournament,
-  buildTournamentSummary,
 } from "../src/lib/grid/fetchTournaments";
 import type { GridSeriesState } from "../src/lib/grid/types/seriesState";
 import type { TournamentSummary } from "../src/types/match";

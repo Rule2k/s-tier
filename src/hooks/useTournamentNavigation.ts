@@ -1,6 +1,11 @@
 "use client";
 
 import { useState, useCallback, useMemo } from "react";
+import { findAdjacentTournamentSummary } from "@/lib/tournaments/findAdjacentTournamentSummary";
+import { getTournamentStartDate } from "@/lib/tournaments/getTournamentStartDate";
+import { mergeUniqueTournaments } from "@/lib/tournaments/mergeUniqueTournaments";
+import { sortTournamentSummariesByStartDate } from "@/lib/tournaments/sortTournamentSummariesByStartDate";
+import { sortTournamentsByStartDate } from "@/lib/tournaments/sortTournamentsByStartDate";
 import { useTournaments, useTournamentIndex } from "./useTournaments";
 import type { Tournament } from "@/types/match";
 
@@ -9,9 +14,6 @@ const fetchTournamentById = async (id: string): Promise<Tournament> => {
   if (!response.ok) throw new Error(`Failed to fetch tournament ${id}`);
   return response.json();
 };
-
-const getStartDate = (t: Tournament): string =>
-  t.matches[0]?.scheduledAt ?? "";
 
 export const useTournamentNavigation = () => {
   const {
@@ -25,30 +27,15 @@ export const useTournamentNavigation = () => {
     "previous" | "next" | null
   >(null);
 
-  // All loaded tournaments (default + extras), sorted by first match date
   const allLoaded = useMemo(() => {
-    const merged = [...(defaultTournaments ?? []), ...extraTournaments];
-    const seen = new Set<string>();
-    return merged
-      .filter((t) => {
-        if (seen.has(t.id)) return false;
-        seen.add(t.id);
-        return true;
-      })
-      .sort(
-        (a, b) =>
-          new Date(getStartDate(a)).getTime() -
-          new Date(getStartDate(b)).getTime(),
-      );
+    return sortTournamentsByStartDate(
+      mergeUniqueTournaments([...(defaultTournaments ?? []), ...extraTournaments]),
+    );
   }, [defaultTournaments, extraTournaments]);
 
-  // Index sorted by startDate
   const sortedIndex = useMemo(() => {
     if (!index) return [];
-    return [...index].sort(
-      (a, b) =>
-        new Date(a.startDate).getTime() - new Date(b.startDate).getTime(),
-    );
+    return sortTournamentSummariesByStartDate(index);
   }, [index]);
 
   const loadedIds = useMemo(
@@ -58,63 +45,58 @@ export const useTournamentNavigation = () => {
 
   const hasPrevious = useMemo(() => {
     if (!sortedIndex.length || !allLoaded.length) return false;
-    const earliestDate = getStartDate(allLoaded[0]);
-    return sortedIndex.some(
-      (s) =>
-        new Date(s.startDate).getTime() < new Date(earliestDate).getTime() &&
-        !loadedIds.has(s.id),
+    return Boolean(
+      findAdjacentTournamentSummary({
+        direction: "previous",
+        loadedIds,
+        sortedIndex,
+        boundaryStartDate: getTournamentStartDate(allLoaded[0]),
+      }),
     );
   }, [sortedIndex, allLoaded, loadedIds]);
 
   const hasNext = useMemo(() => {
     if (!sortedIndex.length || !allLoaded.length) return false;
-    const latestDate = getStartDate(allLoaded[allLoaded.length - 1]);
-    return sortedIndex.some(
-      (s) =>
-        new Date(s.startDate).getTime() > new Date(latestDate).getTime() &&
-        !loadedIds.has(s.id),
+    return Boolean(
+      findAdjacentTournamentSummary({
+        direction: "next",
+        loadedIds,
+        sortedIndex,
+        boundaryStartDate: getTournamentStartDate(allLoaded[allLoaded.length - 1]),
+      }),
     );
   }, [sortedIndex, allLoaded, loadedIds]);
 
-  const loadPrevious = useCallback(async () => {
+  const loadDirection = useCallback(async (direction: "previous" | "next") => {
     if (!sortedIndex.length || !allLoaded.length || loadingDirection) return;
-    const earliestDate = getStartDate(allLoaded[0]);
-    const previous = [...sortedIndex]
-      .reverse()
-      .find(
-        (s) =>
-          new Date(s.startDate).getTime() <
-            new Date(earliestDate).getTime() && !loadedIds.has(s.id),
-      );
-    if (!previous) return;
+    const boundaryTournament =
+      direction === "previous" ? allLoaded[0] : allLoaded[allLoaded.length - 1];
+    const adjacent = findAdjacentTournamentSummary({
+      direction,
+      loadedIds,
+      sortedIndex,
+      boundaryStartDate: getTournamentStartDate(boundaryTournament),
+    });
+    if (!adjacent) return;
 
-    setLoadingDirection("previous");
+    setLoadingDirection(direction);
     try {
-      const tournament = await fetchTournamentById(previous.id);
+      const tournament = await fetchTournamentById(adjacent.id);
       setExtraTournaments((prev) => [...prev, tournament]);
     } finally {
       setLoadingDirection(null);
     }
   }, [sortedIndex, allLoaded, loadedIds, loadingDirection]);
 
-  const loadNext = useCallback(async () => {
-    if (!sortedIndex.length || !allLoaded.length || loadingDirection) return;
-    const latestDate = getStartDate(allLoaded[allLoaded.length - 1]);
-    const next = sortedIndex.find(
-      (s) =>
-        new Date(s.startDate).getTime() > new Date(latestDate).getTime() &&
-        !loadedIds.has(s.id),
-    );
-    if (!next) return;
+  const loadPrevious = useCallback(
+    () => loadDirection("previous"),
+    [loadDirection],
+  );
 
-    setLoadingDirection("next");
-    try {
-      const tournament = await fetchTournamentById(next.id);
-      setExtraTournaments((prev) => [...prev, tournament]);
-    } finally {
-      setLoadingDirection(null);
-    }
-  }, [sortedIndex, allLoaded, loadedIds, loadingDirection]);
+  const loadNext = useCallback(
+    () => loadDirection("next"),
+    [loadDirection],
+  );
 
   return {
     tournaments: allLoaded,
