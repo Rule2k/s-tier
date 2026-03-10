@@ -1,4 +1,4 @@
-import { getMapWinnerIndex } from "./getMapWinnerIndex";
+import { getMapWinnerIndex } from "../getMapWinnerIndex";
 import { makeMapScore } from "@/test/fixtures/matches";
 
 describe("getMapWinnerIndex", () => {

@@ -1,5 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import { MatchCard } from "./MatchCard";
+import { MatchCard } from "../MatchCard";
 import { makeMatch } from "@/test/fixtures/matches";
 
 describe("MatchCard", () => {

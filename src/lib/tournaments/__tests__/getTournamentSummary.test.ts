@@ -1,4 +1,4 @@
-import { getTournamentSummary } from "./getTournamentSummary";
+import { getTournamentSummary } from "../getTournamentSummary";
 import { makeMatch } from "@/test/fixtures/matches";
 
 describe("getTournamentSummary", () => {

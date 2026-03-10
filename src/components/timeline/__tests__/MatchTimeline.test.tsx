@@ -1,5 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import { MatchTimeline } from "./MatchTimeline";
+import { MatchTimeline } from "../MatchTimeline";
 import { makeMatch } from "@/test/fixtures/matches";
 
 // jsdom doesn't implement scrollIntoView

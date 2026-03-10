@@ -1,5 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import { TournamentTimeline } from "./TournamentTimeline";
+import { TournamentTimeline } from "../TournamentTimeline";
 import { makeTournament } from "@/test/fixtures/matches";
 
 describe("TournamentTimeline", () => {

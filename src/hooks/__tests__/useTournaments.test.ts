@@ -1,6 +1,6 @@
 import { renderHook, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useTournaments } from "./useTournaments";
+import { useTournaments } from "../useTournaments";
 import { makeTournament } from "@/test/fixtures/matches";
 import { createElement, type ReactNode } from "react";
 

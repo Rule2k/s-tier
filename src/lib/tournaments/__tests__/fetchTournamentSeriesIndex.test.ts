@@ -1,4 +1,4 @@
-import { fetchTournamentSeriesIndex } from "./fetchTournamentSeriesIndex";
+import { fetchTournamentSeriesIndex } from "../fetchTournamentSeriesIndex";
 import { makeGridSeries } from "@/test/fixtures/matches";
 
 vi.mock("@/lib/grid/fetchTournaments", () => ({

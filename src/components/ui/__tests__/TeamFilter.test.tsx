@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { TeamFilter } from "./TeamFilter";
+import { TeamFilter } from "../TeamFilter";
 
 const teams = [
   { name: "Team Alpha", imageUrl: "https://img.example.com/alpha.png" },

@@ -1,4 +1,4 @@
-import { getUniqueTeams } from "./getUniqueTeams";
+import { getUniqueTeams } from "../getUniqueTeams";
 import { makeMatch, makeTournament } from "@/test/fixtures/matches";
 
 describe("getUniqueTeams", () => {

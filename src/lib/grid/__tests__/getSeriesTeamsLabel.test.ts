@@ -1,4 +1,4 @@
-import { getSeriesTeamsLabel } from "./getSeriesTeamsLabel";
+import { getSeriesTeamsLabel } from "../getSeriesTeamsLabel";
 import { makeGridSeries } from "@/test/fixtures/matches";
 
 describe("getSeriesTeamsLabel", () => {

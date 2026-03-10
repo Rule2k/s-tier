@@ -1,4 +1,4 @@
-import { buildTimelineRows } from "./buildTimelineRows";
+import { buildTimelineRows } from "../buildTimelineRows";
 import { makeTournament, makeMatch } from "@/test/fixtures/matches";
 import type { Tournament } from "@/types/match";
 

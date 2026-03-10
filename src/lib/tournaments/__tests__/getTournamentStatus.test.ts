@@ -1,4 +1,4 @@
-import { getTournamentStatus } from "./getTournamentStatus";
+import { getTournamentStatus } from "../getTournamentStatus";
 import { makeMatch } from "@/test/fixtures/matches";
 
 describe("getTournamentStatus", () => {

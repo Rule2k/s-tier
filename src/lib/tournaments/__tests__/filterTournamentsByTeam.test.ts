@@ -1,4 +1,4 @@
-import { filterTournamentsByTeam } from "./filterTournamentsByTeam";
+import { filterTournamentsByTeam } from "../filterTournamentsByTeam";
 import { makeMatch, makeTournament } from "@/test/fixtures/matches";
 
 describe("filterTournamentsByTeam", () => {

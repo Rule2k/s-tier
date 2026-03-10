@@ -1,4 +1,4 @@
-import { isStartingSoon } from "./isStartingSoon";
+import { isStartingSoon } from "../isStartingSoon";
 import { makeMatch } from "@/test/fixtures/matches";
 
 describe("isStartingSoon", () => {

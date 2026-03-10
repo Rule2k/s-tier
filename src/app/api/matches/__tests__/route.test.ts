@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { GET } from "./route";
+import { GET } from "../route";
 import redis from "@/lib/redis/client";
 import { makeTournament, makeTournamentSummary } from "@/test/fixtures/matches";
 

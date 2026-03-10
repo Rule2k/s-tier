@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { TournamentBlock } from "./TournamentBlock";
+import { TournamentBlock } from "../TournamentBlock";
 import { makeTournament, makeMatch } from "@/test/fixtures/matches";
 
 describe("TournamentBlock", () => {

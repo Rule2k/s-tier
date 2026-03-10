@@ -1,4 +1,4 @@
-import { buildTournamentSummary } from "./buildTournamentSummary";
+import { buildTournamentSummary } from "../buildTournamentSummary";
 import { makeGridSeries } from "@/test/fixtures/matches";
 
 describe("buildTournamentSummary", () => {

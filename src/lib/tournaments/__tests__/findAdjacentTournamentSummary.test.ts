@@ -1,4 +1,4 @@
-import { findAdjacentTournamentSummary } from "./findAdjacentTournamentSummary";
+import { findAdjacentTournamentSummary } from "../findAdjacentTournamentSummary";
 import { makeTournamentSummary } from "@/test/fixtures/matches";
 
 describe("findAdjacentTournamentSummary", () => {

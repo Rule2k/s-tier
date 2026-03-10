@@ -1,4 +1,4 @@
-import { getPlayedMaps } from "./getPlayedMaps";
+import { getPlayedMaps } from "../getPlayedMaps";
 import { makeMapScore } from "@/test/fixtures/matches";
 
 describe("getPlayedMaps", () => {

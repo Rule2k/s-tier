@@ -1,4 +1,4 @@
-import { selectRelevantTournaments } from "./selectRelevantTournaments";
+import { selectRelevantTournaments } from "../selectRelevantTournaments";
 import { makeTournamentSummary } from "@/test/fixtures/matches";
 
 describe("selectRelevantTournaments", () => {

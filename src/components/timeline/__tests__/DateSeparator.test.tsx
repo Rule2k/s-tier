@@ -1,5 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import { DateSeparator } from "./DateSeparator";
+import { DateSeparator } from "../DateSeparator";
 import { addDays, subDays } from "date-fns";
 
 describe("DateSeparator", () => {

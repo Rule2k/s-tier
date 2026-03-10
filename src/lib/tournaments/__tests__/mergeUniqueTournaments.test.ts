@@ -1,4 +1,4 @@
-import { mergeUniqueTournaments } from "./mergeUniqueTournaments";
+import { mergeUniqueTournaments } from "../mergeUniqueTournaments";
 import { makeTournament } from "@/test/fixtures/matches";
 
 describe("mergeUniqueTournaments", () => {

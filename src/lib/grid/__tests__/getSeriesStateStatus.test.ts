@@ -1,4 +1,4 @@
-import { getSeriesStateStatus } from "./getSeriesStateStatus";
+import { getSeriesStateStatus } from "../getSeriesStateStatus";
 import { makeGridSeriesState } from "@/test/fixtures/matches";
 
 describe("getSeriesStateStatus", () => {
