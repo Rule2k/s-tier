@@ -11,6 +11,7 @@ export const CACHE_TTL = {
   TOURNAMENT_RUNNING: 60, // 1 min (at least one live match)
   TOURNAMENT_UPCOMING: 120, // 2 min (has upcoming matches, needs frequent refresh)
   TOURNAMENT_PAST: 604_800, // 7 days (all matches finished)
+  MATCH_UPCOMING: 1_800, // 30 min (scheduled > 1h away)
   MATCH_RUNNING: 60, // 1 min
   MATCH_FINISHED: 604_800, // 7 days
 } as const;

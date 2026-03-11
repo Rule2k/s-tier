@@ -50,9 +50,6 @@ const refreshTournaments = async () => {
       tournamentStates.set(tournamentId, seriesStates);
 
       for (const gs of gridSeriesList) {
-        const scheduledTime = new Date(gs.startTimeScheduled).getTime();
-        if (scheduledTime > now + ONE_HOUR_MS) continue;
-
         const cachedRaw = await redis.get(CACHE_KEYS.matchState(gs.id));
         if (cachedRaw) {
           const cached: GridSeriesState = JSON.parse(cachedRaw);
@@ -82,9 +79,12 @@ const refreshTournaments = async () => {
         const status = getSeriesStateStatus(state);
         console.log(`[worker]   ${teams} (${gs.id}): ${status}`);
         seriesStates.set(gs.id, state);
+        const scheduledTime = new Date(gs.startTimeScheduled).getTime();
         const ttl = state.finished
           ? CACHE_TTL.MATCH_FINISHED
-          : CACHE_TTL.MATCH_RUNNING;
+          : scheduledTime > now + ONE_HOUR_MS
+            ? CACHE_TTL.MATCH_UPCOMING
+            : CACHE_TTL.MATCH_RUNNING;
         await redis.set(
           CACHE_KEYS.matchState(gs.id),
           JSON.stringify(state),
