@@ -1,7 +1,6 @@
 import redis from "../src/lib/redis/client";
 import { CACHE_KEYS, CACHE_TTL, getTournamentTtl } from "../src/lib/redis/keys";
 import { TOURNAMENT_IDS } from "../src/config/tournaments";
-import { getSeriesStateStatus } from "../src/lib/grid/getSeriesStateStatus";
 import { getSeriesTeamsLabel } from "../src/lib/grid/getSeriesTeamsLabel";
 import {
   fetchSeriesState,
@@ -16,6 +15,7 @@ const MAX_STATE_FETCHES_PER_CYCLE = 100;
 const ONE_HOUR_MS = 60 * 60 * 1000;
 
 const refreshTournaments = async () => {
+  const cycleStart = Date.now();
   try {
     const {
       summaries: tournamentIndex,
@@ -27,9 +27,6 @@ const refreshTournaments = async () => {
       JSON.stringify(tournamentIndex),
       "EX",
       CACHE_TTL.INDEX,
-    );
-    console.log(
-      `[worker] Cached index (${tournamentIndex.length} tournaments)`,
     );
 
     // Phase 2 — Collect candidates and fetch states in parallel
@@ -71,13 +68,12 @@ const refreshTournaments = async () => {
     );
 
     // Process results
+    const statusCounts = { running: 0, upcoming: 0, finished: 0, failed: 0 };
+
     for (const { tournamentId, gs, state } of fetched) {
       const seriesStates = tournamentStates.get(tournamentId)!;
-      const teams = getSeriesTeamsLabel(gs);
 
       if (state) {
-        const status = getSeriesStateStatus(state);
-        console.log(`[worker]   ${teams} (${gs.id}): ${status}`);
         seriesStates.set(gs.id, state);
         const scheduledTime = new Date(gs.startTimeScheduled).getTime();
         const ttl = state.finished
@@ -85,6 +81,11 @@ const refreshTournaments = async () => {
           : scheduledTime > now + ONE_HOUR_MS
             ? CACHE_TTL.MATCH_UPCOMING
             : CACHE_TTL.MATCH_RUNNING;
+
+        if (state.finished) statusCounts.finished++;
+        else if (state.started) statusCounts.running++;
+        else statusCounts.upcoming++;
+
         await redis.set(
           CACHE_KEYS.matchState(gs.id),
           JSON.stringify(state),
@@ -92,9 +93,9 @@ const refreshTournaments = async () => {
           ttl,
         );
       } else {
-        console.warn(
-          `[worker]   ${teams} (${gs.id}): state fetch returned null`,
-        );
+        statusCounts.failed++;
+        const teams = getSeriesTeamsLabel(gs);
+        console.warn(`[worker] State fetch returned null: ${teams} (${gs.id})`);
       }
     }
 
@@ -120,8 +121,16 @@ const refreshTournaments = async () => {
       );
     }
 
+    if (candidates.length > MAX_STATE_FETCHES_PER_CYCLE) {
+      console.warn(
+        `[worker] Budget exceeded: ${candidates.length} candidates, capped at ${MAX_STATE_FETCHES_PER_CYCLE}`,
+      );
+    }
+
+    const duration = ((Date.now() - cycleStart) / 1000).toFixed(1);
+    const { running, upcoming, finished, failed } = statusCounts;
     console.log(
-      `[worker] Cached ${allTournamentSeries.size} tournaments (${toFetch.length} state fetches)`,
+      `[worker] Cycle done in ${duration}s — central ${allTournamentSeries.size}/20, live ${toFetch.length}/180 (${running} running, ${upcoming} upcoming, ${finished} finished, ${failed} failed)`,
     );
   } catch (error) {
     console.error("[worker] Refresh failed:", error);
