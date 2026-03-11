@@ -1,7 +1,6 @@
 import redis from "../src/lib/redis/client";
 import { CACHE_KEYS, CACHE_TTL, getTournamentTtl } from "../src/lib/redis/keys";
 import { TOURNAMENT_IDS } from "../src/config/tournaments";
-import { getSeriesTeamsLabel } from "../src/lib/grid/getSeriesTeamsLabel";
 import {
   fetchSeriesState,
   buildTournament,
@@ -49,6 +48,7 @@ const refreshTournaments = async () => {
       for (const gs of gridSeriesList) {
         const cachedRaw = await redis.get(CACHE_KEYS.matchState(gs.id));
         if (cachedRaw) {
+          if (cachedRaw === "pending") continue;
           const cached: GridSeriesState = JSON.parse(cachedRaw);
           seriesStates.set(gs.id, cached);
           if (cached.finished) continue;
@@ -93,9 +93,13 @@ const refreshTournaments = async () => {
           ttl,
         );
       } else {
-        statusCounts.failed++;
-        const teams = getSeriesTeamsLabel(gs);
-        console.warn(`[worker] State fetch returned null: ${teams} (${gs.id})`);
+        statusCounts.upcoming++;
+        await redis.set(
+          CACHE_KEYS.matchState(gs.id),
+          "pending",
+          "EX",
+          CACHE_TTL.MATCH_UPCOMING,
+        );
       }
     }
 
