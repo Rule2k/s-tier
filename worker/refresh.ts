@@ -203,7 +203,7 @@ const fastLoop = async () => {
 
           affectedTournaments.add(entry.tournamentId);
         } else {
-          entry.failCount++;
+          // null = no state available yet (normal for upcoming series)
           entry.lastFetchedAt = Date.now();
         }
       } catch (error) {
@@ -242,12 +242,15 @@ const fastLoop = async () => {
     }
     cleanupPerSeriesBuckets(activeIds);
 
-    logFastCycle({
-      cycleNumber: fastCycleNumber,
-      durationMs: Date.now() - start,
-      fetched: fetched as { P0: number; P1: number; P2: number; P3: number },
-      eligible: eligible as { P0: number; P1: number; P2: number; P3: number },
-    });
+    const totalEligible = Object.values(eligible).reduce((a, b) => a + b, 0);
+    if (totalEligible > 0) {
+      logFastCycle({
+        cycleNumber: fastCycleNumber,
+        durationMs: Date.now() - start,
+        fetched: fetched as { P0: number; P1: number; P2: number; P3: number },
+        eligible: eligible as { P0: number; P1: number; P2: number; P3: number },
+      });
+    }
 
   } catch (error) {
     logError(`Fast loop cycle #${fastCycleNumber} failed`, error);
