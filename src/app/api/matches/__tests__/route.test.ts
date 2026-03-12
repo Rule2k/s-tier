@@ -4,20 +4,11 @@ import redis from "@/lib/redis/client";
 import { makeTournament, makeTournamentSummary } from "@/test/fixtures/matches";
 
 vi.mock("@/lib/redis/client", () => ({
-  default: { get: vi.fn(), set: vi.fn() },
+  default: { get: vi.fn(), set: vi.fn(), mget: vi.fn() },
 }));
 
-vi.mock("@/lib/grid/fetchTournaments", () => ({
-  fetchTournamentSeries: vi.fn(),
-  fetchSeriesStates: vi.fn(),
-  buildTournament: vi.fn(),
-}));
 vi.mock("@/lib/tournaments/selectRelevantTournaments", () => ({
   selectRelevantTournaments: vi.fn(),
-}));
-
-vi.mock("@/config/tournaments", () => ({
-  TOURNAMENT_IDS: ["828791"],
 }));
 
 import {
@@ -40,9 +31,8 @@ describe("GET /api/matches", () => {
       const index = [makeTournamentSummary({ id: "828791" })];
       const tournament = makeTournament({ id: "828791" });
 
-      vi.mocked(redis.get)
-        .mockResolvedValueOnce(JSON.stringify(index))          // tournaments:index
-        .mockResolvedValueOnce(JSON.stringify(tournament));    // tournament:828791
+      vi.mocked(redis.get).mockResolvedValueOnce(JSON.stringify(index));
+      vi.mocked(redis.mget).mockResolvedValueOnce([JSON.stringify(tournament)]);
       vi.mocked(selectRelevantTournaments).mockReturnValue(index);
 
       const response = await GET(makeRequest());
@@ -51,14 +41,24 @@ describe("GET /api/matches", () => {
       expect(data).toEqual([tournament]);
     });
 
-    it("returns 500 when Redis is down and no fallback", async () => {
+    it("returns 503 when Redis index is empty", async () => {
+      vi.mocked(redis.get).mockResolvedValueOnce(null);
+
+      const response = await GET(makeRequest());
+      const data = await response.json();
+
+      expect(response.status).toBe(503);
+      expect(data).toEqual({ error: "Data not yet available", retryAfter: 15 });
+    });
+
+    it("returns 503 when Redis is down", async () => {
       vi.mocked(redis.get).mockRejectedValue(new Error("Redis down"));
 
       const response = await GET(makeRequest());
       const data = await response.json();
 
-      expect(response.status).toBe(500);
-      expect(data).toEqual({ error: "Failed to fetch tournaments" });
+      expect(response.status).toBe(503);
+      expect(data).toEqual({ error: "Data not yet available", retryAfter: 15 });
     });
   });
 
@@ -71,6 +71,20 @@ describe("GET /api/matches", () => {
       const data = await response.json();
 
       expect(data).toEqual(tournament);
+    });
+
+    it("returns 404 when tournament not in cache", async () => {
+      vi.mocked(redis.get).mockResolvedValueOnce(null);
+
+      const response = await GET(makeRequest({ tournamentId: "999" }));
+      expect(response.status).toBe(404);
+    });
+
+    it("returns 503 when Redis fails", async () => {
+      vi.mocked(redis.get).mockRejectedValue(new Error("Redis down"));
+
+      const response = await GET(makeRequest({ tournamentId: "828791" }));
+      expect(response.status).toBe(503);
     });
   });
 });

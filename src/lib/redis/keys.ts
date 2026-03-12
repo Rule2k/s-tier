@@ -3,17 +3,18 @@ import type { Tournament } from "@/types/match";
 export const CACHE_KEYS = {
   TOURNAMENTS_INDEX: "tournaments:index",
   tournamentById: (id: string) => `tournament:${id}`,
-  matchState: (seriesId: string) => `match:state:${seriesId}`,
+  seriesState: (seriesId: string) => `series:state:${seriesId}`,
 } as const;
 
 export const CACHE_TTL = {
-  INDEX: 300, // 5 min
-  TOURNAMENT_RUNNING: 60, // 1 min (at least one live match)
-  TOURNAMENT_UPCOMING: 120, // 2 min (has upcoming matches, needs frequent refresh)
+  INDEX: 600, // 10 min
+  TOURNAMENT_RUNNING: 120, // 2 min (at least one live match)
+  TOURNAMENT_UPCOMING: 300, // 5 min (has upcoming matches)
   TOURNAMENT_PAST: 604_800, // 7 days (all matches finished)
-  MATCH_UPCOMING: 1_800, // 30 min (scheduled > 1h away)
-  MATCH_RUNNING: 60, // 1 min
-  MATCH_FINISHED: 604_800, // 7 days
+  SERIES_STATE_LIVE: 120, // 2 min
+  SERIES_STATE_UPCOMING_SOON: 900, // 15 min (upcoming < 24h)
+  SERIES_STATE_UPCOMING_FAR: 3_600, // 1 hour (upcoming > 24h)
+  SERIES_STATE_FINISHED: 604_800, // 7 days
 } as const;
 
 export const getTournamentTtl = (tournament: Tournament): number => {
@@ -23,6 +24,5 @@ export const getTournamentTtl = (tournament: Tournament): number => {
   const allFinished = tournament.matches.every((m) => m.status === "finished");
   if (allFinished) return CACHE_TTL.TOURNAMENT_PAST;
 
-  // Has upcoming matches — refresh often so we catch status changes
   return CACHE_TTL.TOURNAMENT_UPCOMING;
 };
