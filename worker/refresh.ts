@@ -17,7 +17,6 @@ import {
   upsertSeries,
   getEligibleSeries,
   getSeriesForTournament,
-  getTierCounts,
   getRegistry,
   classifyTier,
 } from "./scheduler";
@@ -140,11 +139,9 @@ const slowLoop = async () => {
         .catch((err) => logError("Redis write failed for tournament index", err));
     }
 
-    const tierCounts = getTierCounts();
     logSlowCycle({
       tournamentIds,
-      totalSeries: getRegistry().size,
-      tierCounts,
+      entries: [...getRegistry().values()],
       durationMs: Date.now() - start,
     });
 

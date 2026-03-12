@@ -1,5 +1,5 @@
 import { getTokenCount, centralBucket, liveGlobalBucket } from "./rate-limiter";
-import type { TierCounts } from "./scheduler";
+import type { SeriesEntry } from "./scheduler";
 
 interface FastCycleStats {
   cycleNumber: number;
@@ -26,20 +26,36 @@ export const logFastCycle = (stats: FastCycleStats): void => {
 
 interface SlowCycleStats {
   tournamentIds: string[];
-  totalSeries: number;
-  tierCounts: TierCounts;
+  entries: SeriesEntry[];
   durationMs: number;
 }
 
+const countSeriesStates = (entries: SeriesEntry[]) => {
+  let running = 0;
+  let upcoming = 0;
+  let finished = 0;
+  let pending = 0;
+
+  for (const entry of entries) {
+    if (!entry.state) { pending++; continue; }
+    if (entry.state.finished) { finished++; continue; }
+    if (entry.state.started) { running++; continue; }
+    upcoming++;
+  }
+
+  return { running, upcoming, finished, pending };
+};
+
 export const logSlowCycle = (stats: SlowCycleStats): void => {
-  const { tournamentIds, totalSeries, tierCounts, durationMs } = stats;
+  const { tournamentIds, entries, durationMs } = stats;
   const duration = (durationMs / 1000).toFixed(1);
   const ids = tournamentIds.join(", ");
+  const { running, upcoming, finished, pending } = countSeriesStates(entries);
 
   console.log(
     `[worker:slow] Refreshed tournaments [${ids}] in ${duration}s` +
-      ` — ${totalSeries} series` +
-      ` (${tierCounts.P0} running, ${tierCounts.P1 + tierCounts.P2} upcoming, ${tierCounts.SKIP} finished)`,
+      ` — ${entries.length} series` +
+      ` (${running} running, ${upcoming} upcoming, ${finished} finished, ${pending} pending)`,
   );
 };
 
