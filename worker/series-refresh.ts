@@ -1,0 +1,138 @@
+import { fetchSeriesState } from "./grid/series-state";
+import { writeSeriesState, writeSeriesMeta, writeHeartbeat } from "./redis-writer";
+import {
+  getEligibleSeries,
+  getRegistry,
+  classifyTier,
+} from "./scheduler";
+import {
+  waitForToken,
+  liveGlobalBucket,
+  getLivePerSeriesBucket,
+  drainBucket,
+  cleanupPerSeriesBuckets,
+} from "./rate-limiter";
+import { logFastCycle, logError } from "./logger";
+import { config } from "./config";
+
+// --- State ---
+
+let cycleNumber = 0;
+
+// --- Series refresh cycle ---
+
+const runRefreshCycle = async (): Promise<void> => {
+  cycleNumber++;
+  const start = Date.now();
+
+  const fetched: Record<string, number> = { P0: 0, P1: 0, P2: 0, P3: 0 };
+  const eligible: Record<string, number> = { P0: 0, P1: 0, P2: 0, P3: 0 };
+
+  try {
+    const series = getEligibleSeries();
+
+    for (const { tier } of series) {
+      eligible[tier]++;
+    }
+
+    for (const { entry, tier } of series) {
+      // Rate limit: global + per-series
+      try {
+        await waitForToken(liveGlobalBucket);
+        await waitForToken(getLivePerSeriesBucket(entry.seriesId));
+      } catch {
+        // Budget exhausted — stop, remaining picked up next cycle
+        break;
+      }
+
+      try {
+        const state = await fetchSeriesState(entry.seriesId);
+
+        if (state) {
+          // Update scheduler registry
+          entry.state = {
+            id: state.seriesId,
+            started: state.started,
+            finished: state.finished,
+            teams: state.teams,
+            games: state.games.map((g) => ({
+              sequenceNumber: g.sequenceNumber,
+              started: g.started,
+              finished: g.finished,
+              map: { name: g.mapName },
+              teams: g.teams.map((t) => ({ score: t.score, side: t.side })),
+            })),
+          };
+          entry.lastFetchedAt = Date.now();
+          entry.failCount = 0;
+          fetched[tier]++;
+
+          // Write to Redis
+          await writeSeriesState(entry.seriesId, state);
+
+          // Determine status label for meta
+          const status = state.finished
+            ? "past"
+            : state.started
+              ? "live"
+              : "upcoming";
+          await writeSeriesMeta(entry.seriesId, status);
+        } else {
+          entry.lastFetchedAt = Date.now();
+        }
+      } catch (error) {
+        entry.failCount++;
+        entry.lastFetchedAt = Date.now();
+
+        if (isRateLimitError(error)) {
+          drainBucket(liveGlobalBucket);
+          break;
+        }
+      }
+    }
+
+    // Cleanup per-series buckets for finished series
+    const activeIds = new Set<string>();
+    for (const entry of getRegistry().values()) {
+      if (!entry.state?.finished) activeIds.add(entry.seriesId);
+    }
+    cleanupPerSeriesBuckets(activeIds);
+
+    // Heartbeat
+    await writeHeartbeat();
+
+    // Log (only if there was something to do)
+    const totalEligible = Object.values(eligible).reduce((a, b) => a + b, 0);
+    if (totalEligible > 0) {
+      logFastCycle({
+        cycleNumber,
+        durationMs: Date.now() - start,
+        fetched: fetched as { P0: number; P1: number; P2: number; P3: number },
+        eligible: eligible as { P0: number; P1: number; P2: number; P3: number },
+      });
+    }
+  } catch (error) {
+    logError(`Series refresh cycle #${cycleNumber} failed`, error);
+  }
+};
+
+// --- Helpers ---
+
+const isRateLimitError = (error: unknown): boolean => {
+  if (error instanceof Error) {
+    return error.message.includes("429") || error.message.includes("Too Many Requests");
+  }
+  return false;
+};
+
+// --- Public ---
+
+export const startSeriesRefreshLoop = async (): Promise<void> => {
+  // Initial run
+  await runRefreshCycle();
+
+  // Then repeat
+  setInterval(() => {
+    runRefreshCycle().catch((err) => logError("Series refresh loop unhandled error", err));
+  }, config.seriesRefresh.intervalMs);
+};
