@@ -6,14 +6,8 @@ import { getTournamentStartDate } from "@/utils/tournaments/getTournamentStartDa
 import { mergeUniqueTournaments } from "@/utils/tournaments/mergeUniqueTournaments";
 import { sortTournamentSummariesByStartDate } from "@/utils/tournaments/sortTournamentSummariesByStartDate";
 import { sortTournamentsByStartDate } from "@/utils/tournaments/sortTournamentsByStartDate";
-import { useTournaments, useTournamentIndex } from "./useTournaments";
+import { useTournaments, useTournamentIndex, fetchTournamentById } from "./useTournaments";
 import type { Tournament } from "@/types/match";
-
-const fetchTournamentById = async (id: string): Promise<Tournament> => {
-  const response = await fetch(`/api/matches?tournamentId=${id}`);
-  if (!response.ok) throw new Error(`Failed to fetch tournament ${id}`);
-  return response.json();
-};
 
 export const useTournamentNavigation = () => {
   const {

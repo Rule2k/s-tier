@@ -21,7 +21,7 @@ describe("useTournaments", () => {
     const tournaments = [makeTournament()];
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
       ok: true,
-      json: () => Promise.resolve(tournaments),
+      json: () => Promise.resolve({ tournaments, hasMore: false, total: 1 }),
     }));
 
     const { result } = renderHook(() => useTournaments(), { wrapper: createWrapper() });
