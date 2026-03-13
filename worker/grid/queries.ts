@@ -1,8 +1,8 @@
 /** All Grid GraphQL queries in one file. */
 
 export const tournamentsQuery = `
-  query Tournaments($first: Int!, $after: String, $filter: TournamentFilter!) {
-    tournaments(first: $first, after: $after, filter: $filter) {
+  query Tournaments($first: Int!, $after: String, $titleId: ID!) {
+    tournaments(first: $first, after: $after, filter: { title: { id: $titleId } }) {
       edges {
         node {
           id
