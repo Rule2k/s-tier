@@ -1,5 +1,19 @@
-import type { GridSeries } from "../src/lib/grid/types/series";
-import type { GridSeriesState } from "../src/lib/grid/types/seriesState";
+// Grid types — will be replaced by worker/grid/ types in Phase 1
+interface GridSeries {
+  id: string;
+  startTimeScheduled: string;
+  format: { nameShortened: string };
+  tournament: { id: string; name: string; nameShortened: string; logoUrl: string };
+  teams: { baseInfo: { id: string; name: string; nameShortened?: string; logoUrl: string } }[];
+}
+
+interface GridSeriesState {
+  id: string;
+  started: boolean;
+  finished: boolean;
+  teams: { id: string; name: string; score: number }[];
+  games: { sequenceNumber: number; started: boolean; finished: boolean; map: { name: string }; teams: { score: number; side: string }[] }[];
+}
 
 // --- Priority tiers ---
 

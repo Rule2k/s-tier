@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import type { Match } from "@/types/match";
 import { MatchCard } from "./MatchCard";
 import { DateSeparator } from "./DateSeparator";
-import { groupMatchesByDate } from "@/lib/matches/groupByDate";
+import { groupMatchesByDate } from "@/utils/matches/groupByDate";
 import { isToday, startOfDay } from "date-fns";
 
 const statusOrder: Record<Match["status"], number> = {

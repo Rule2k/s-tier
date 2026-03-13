@@ -1,6 +1,4 @@
 import type { Match, TournamentView, MapScore, MatchTeam, TournamentSummary } from "@/types/match";
-import type { GridSeries } from "@/lib/grid/types/series";
-import type { GridSeriesState } from "@/lib/grid/types/seriesState";
 
 export const makeMatchTeam = (overrides: Partial<MatchTeam> = {}): MatchTeam => ({
   name: "Team Alpha",
@@ -60,62 +58,3 @@ export const makeTournamentSummary = (overrides: Partial<TournamentSummary> = {}
   ...overrides,
 });
 
-export const makeGridSeries = (overrides: Partial<GridSeries> = {}): GridSeries => ({
-  id: "1234",
-  startTimeScheduled: "2025-06-15T15:00:00Z",
-  format: { nameShortened: "Bo3" },
-  tournament: {
-    id: "828791",
-    name: "ESL Pro League Season 23",
-    nameShortened: "EPL S23",
-    logoUrl: "https://img.grid.gg/esl-pro-league.png",
-  },
-  teams: [
-    { baseInfo: { id: "1", name: "Team Alpha", nameShortened: "TA", logoUrl: "https://img.grid.gg/team-alpha.png" } },
-    { baseInfo: { id: "2", name: "Team Bravo", nameShortened: "TB", logoUrl: "https://img.grid.gg/team-bravo.png" } },
-  ],
-  ...overrides,
-});
-
-export const makeGridSeriesState = (overrides: Partial<GridSeriesState> = {}): GridSeriesState => ({
-  id: "1234",
-  started: true,
-  finished: true,
-  teams: [
-    { id: "1", name: "Team Alpha", score: 2 },
-    { id: "2", name: "Team Bravo", score: 1 },
-  ],
-  games: [
-    {
-      sequenceNumber: 1,
-      started: true,
-      finished: true,
-      map: { name: "mirage" },
-      teams: [
-        { score: 13, side: "terrorists" },
-        { score: 8, side: "counter-terrorists" },
-      ],
-    },
-    {
-      sequenceNumber: 2,
-      started: true,
-      finished: true,
-      map: { name: "inferno" },
-      teams: [
-        { score: 9, side: "counter-terrorists" },
-        { score: 13, side: "terrorists" },
-      ],
-    },
-    {
-      sequenceNumber: 3,
-      started: true,
-      finished: true,
-      map: { name: "nuke" },
-      teams: [
-        { score: 13, side: "terrorists" },
-        { score: 10, side: "counter-terrorists" },
-      ],
-    },
-  ],
-  ...overrides,
-});

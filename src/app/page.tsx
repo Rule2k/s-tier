@@ -5,9 +5,8 @@ import { useTournamentNavigation } from "@/hooks/useTournamentNavigation";
 import { TournamentTimeline } from "@/components/tournament/TournamentTimeline";
 import { Spinner } from "@/components/ui/Spinner";
 import { useTeamFilter } from "@/context/TeamFilterContext";
-import { getUniqueTeams } from "@/lib/teams/getUniqueTeams";
-import { filterTournamentsByTeam } from "@/lib/tournaments/filterTournamentsByTeam";
-import type { TournamentView } from "@/types/match";
+import { getUniqueTeams } from "@/utils/teams/getUniqueTeams";
+import { filterTournamentsByTeam } from "@/utils/tournaments/filterTournamentsByTeam";
 
 export default function Home() {
   const {

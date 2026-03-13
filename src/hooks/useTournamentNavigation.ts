@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useCallback, useMemo } from "react";
-import { findAdjacentTournamentSummary } from "@/lib/tournaments/findAdjacentTournamentSummary";
-import { getTournamentStartDate } from "@/lib/tournaments/getTournamentStartDate";
-import { mergeUniqueTournaments } from "@/lib/tournaments/mergeUniqueTournaments";
-import { sortTournamentSummariesByStartDate } from "@/lib/tournaments/sortTournamentSummariesByStartDate";
-import { sortTournamentsByStartDate } from "@/lib/tournaments/sortTournamentsByStartDate";
+import { findAdjacentTournamentSummary } from "@/utils/tournaments/findAdjacentTournamentSummary";
+import { getTournamentStartDate } from "@/utils/tournaments/getTournamentStartDate";
+import { mergeUniqueTournaments } from "@/utils/tournaments/mergeUniqueTournaments";
+import { sortTournamentSummariesByStartDate } from "@/utils/tournaments/sortTournamentSummariesByStartDate";
+import { sortTournamentsByStartDate } from "@/utils/tournaments/sortTournamentsByStartDate";
 import { useTournaments, useTournamentIndex } from "./useTournaments";
 import type { Tournament } from "@/types/match";
 

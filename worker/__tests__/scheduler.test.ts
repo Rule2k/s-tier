@@ -10,8 +10,11 @@ import {
   removeSeriesNotIn,
   TIER_INTERVALS,
 } from "../scheduler";
-import type { GridSeries } from "../../src/lib/grid/types/series";
-import type { GridSeriesState } from "../../src/lib/grid/types/seriesState";
+import type { SeriesEntry } from "../scheduler";
+
+// Inline Grid types — will be replaced by worker/grid/ types in Phase 1
+type GridSeries = SeriesEntry["gridSeries"];
+type GridSeriesState = NonNullable<SeriesEntry["state"]>;
 
 const makeGridSeries = (
   id: string,

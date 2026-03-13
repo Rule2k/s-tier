@@ -1,4 +1,4 @@
-import { formatDateRange } from "@/lib/matches/formatDateRange";
+import { formatDateRange } from "@/utils/matches/formatDateRange";
 import type { Match } from "@/types/match";
 
 export type TournamentSummary = {

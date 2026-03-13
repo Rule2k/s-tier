@@ -10,9 +10,9 @@ import {
 } from "react";
 import { DateSeparator } from "@/components/timeline/DateSeparator";
 import { MatchCard } from "@/components/timeline/MatchCard";
-import { groupMatchesByDate } from "@/lib/matches/groupByDate";
-import { getTournamentStatus, type TournamentStatus } from "@/lib/tournaments/getTournamentStatus";
-import { getTournamentSummary } from "@/lib/tournaments/getTournamentSummary";
+import { groupMatchesByDate } from "@/utils/matches/groupByDate";
+import { getTournamentStatus, type TournamentStatus } from "@/utils/tournaments/getTournamentStatus";
+import { getTournamentSummary } from "@/utils/tournaments/getTournamentSummary";
 import type { TournamentView } from "@/types/match";
 
 const TournamentStatusBadge = ({ status }: { status: TournamentStatus }) => {

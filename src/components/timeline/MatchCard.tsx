@@ -1,7 +1,7 @@
 import { format } from "date-fns";
-import { getMapWinnerIndex } from "@/lib/matches/getMapWinnerIndex";
-import { getPlayedMaps } from "@/lib/matches/getPlayedMaps";
-import { isStartingSoon } from "@/lib/matches/isStartingSoon";
+import { getMapWinnerIndex } from "@/utils/matches/getMapWinnerIndex";
+import { getPlayedMaps } from "@/utils/matches/getPlayedMaps";
+import { isStartingSoon } from "@/utils/matches/isStartingSoon";
 import type { Match, MapScore } from "@/types/match";
 import { StatusBadge } from "./StatusBadge";
 const cardStyleByStatus: Record<Match["status"], string> = {
