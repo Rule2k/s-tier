@@ -1,8 +1,9 @@
 /** All Grid GraphQL queries in one file. */
 
+/** CS2 title ID is hardcoded — IdFilter type on Grid requires literal value. */
 export const tournamentsQuery = `
-  query Tournaments($first: Int!, $after: String, $titleId: ID!) {
-    tournaments(first: $first, after: $after, filter: { title: { id: $titleId } }) {
+  query Tournaments($first: Int!, $after: String) {
+    tournaments(first: $first, after: $after, filter: { title: { id: 28 } }) {
       edges {
         node {
           id

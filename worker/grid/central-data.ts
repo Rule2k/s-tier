@@ -88,7 +88,6 @@ export const fetchTournaments = async (): Promise<FetchedTournament[]> => {
     const variables = {
       first: config.pagination.pageSize,
       after,
-      titleId: CS2_TITLE_ID,
     };
     const data: GridTournamentsResponse = await centralClient.request(
       tournamentsQuery,
