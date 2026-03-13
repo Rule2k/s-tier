@@ -1,5 +1,8 @@
-// Grid types — will be replaced by worker/grid/ types in Phase 1
-interface GridSeries {
+// Minimal interfaces used by the scheduler registry.
+// The worker fetchers (grid/central-data, grid/series-state) return richer types
+// that are narrowed to these when stored in the registry.
+
+export interface GridSeries {
   id: string;
   startTimeScheduled: string;
   format: { nameShortened: string };
@@ -7,7 +10,7 @@ interface GridSeries {
   teams: { baseInfo: { id: string; name: string; nameShortened?: string; logoUrl: string } }[];
 }
 
-interface GridSeriesState {
+export interface GridSeriesState {
   id: string;
   started: boolean;
   finished: boolean;
