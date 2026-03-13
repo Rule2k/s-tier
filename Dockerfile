@@ -36,4 +36,4 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY src ./src
 COPY worker ./worker
 COPY tsconfig.json ./
-CMD ["npx", "tsx", "worker/refresh.ts"]
+CMD ["npx", "tsx", "worker/index.ts"]

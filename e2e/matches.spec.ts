@@ -43,18 +43,15 @@ const mockTournaments = [
 ];
 
 test.beforeEach(async ({ page }) => {
-  await page.route("**/api/matches", (route) =>
+  await page.route("**/api/tournaments**", (route) =>
     route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify(mockTournaments),
-    }),
-  );
-  await page.route("**/api/tournament-index", (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify([]),
+      body: JSON.stringify({
+        tournaments: mockTournaments,
+        hasMore: false,
+        total: mockTournaments.length,
+      }),
     }),
   );
 });
