@@ -1,7 +1,6 @@
 import { centralClient } from "./client";
 import { tournamentsQuery, allSeriesQuery } from "./queries";
 import { config } from "../config";
-import { CS2_TITLE_ID } from "../../src/shared/config";
 import { waitForToken, centralBucket } from "../rate-limiter";
 
 // --- Grid response types (Central Data specific) ---
@@ -131,11 +130,7 @@ export const fetchTournamentSeries = async (
     const variables = {
       first: config.pagination.pageSize,
       after,
-      filter: {
-        titleIds: [CS2_TITLE_ID],
-        tournament: { id: tournamentId },
-        private: false,
-      },
+      tournamentId,
     };
     const data: GridAllSeriesResponse = await centralClient.request(
       allSeriesQuery,

@@ -91,7 +91,11 @@ const runDiscoveryCycle = async (): Promise<void> => {
 
 const isRateLimitError = (error: unknown): boolean => {
   if (error instanceof Error) {
-    return error.message.includes("429") || error.message.includes("Too Many Requests");
+    const msg = error.message.toLowerCase();
+    return msg.includes("429")
+      || msg.includes("too many requests")
+      || msg.includes("rate limit")
+      || msg.includes("enhance_your_calm");
   }
   return false;
 };

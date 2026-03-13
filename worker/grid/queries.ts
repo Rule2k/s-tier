@@ -1,9 +1,9 @@
 /** All Grid GraphQL queries in one file. */
 
-/** CS2 title ID is hardcoded — IdFilter type on Grid requires literal value. */
+/** CS2 title ID hardcoded — Grid IdFilter only accepts { in: [...] }. */
 export const tournamentsQuery = `
   query Tournaments($first: Int!, $after: String) {
-    tournaments(first: $first, after: $after, filter: { title: { id: 28 } }) {
+    tournaments(first: $first, after: $after, filter: { title: { id: { in: [28] } } }) {
       edges {
         node {
           id
@@ -27,11 +27,11 @@ export const tournamentsQuery = `
 `;
 
 export const allSeriesQuery = `
-  query AllSeries($first: Int!, $after: String, $filter: SeriesFilter!) {
+  query AllSeries($first: Int!, $after: String, $tournamentId: ID!) {
     allSeries(
       first: $first
       after: $after
-      filter: $filter
+      filter: { titleId: 28, tournamentId: $tournamentId }
       orderBy: StartTimeScheduled
       orderDirection: ASC
     ) {
