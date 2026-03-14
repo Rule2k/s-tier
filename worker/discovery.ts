@@ -1,5 +1,4 @@
 import { fetchTournaments, fetchTournamentSeries } from "./grid/central-data";
-import { isPrestigious } from "./prestige";
 import { writeTournaments, writeTournamentSeries, writeDiscoveryTimestamp } from "./redis-writer";
 import { upsertSeries } from "./scheduler";
 import { logSlowCycle, logError } from "./logger";
@@ -9,8 +8,8 @@ import type { FetchedSeries } from "./types/grid";
 
 // --- State ---
 
-/** Set of prestigious tournament IDs discovered so far. */
-const prestigiousTournamentIds = new Set<string>();
+/** Set of tracked tournament IDs discovered so far. */
+const trackedTournamentIds = new Set<string>();
 
 /** Tournaments whose series have already been fetched successfully. */
 const fullyDiscoveredTournaments = new Set<string>();
@@ -24,21 +23,24 @@ const runDiscoveryCycle = async (): Promise<void> => {
     // 1. Fetch all CS2 tournaments (paginated)
     const allTournaments = await fetchTournaments();
 
-    // 2. Filter by prestige
-    const prestigious = allTournaments.filter(isPrestigious);
+    // 2. Filter by configured teams
+    const teamNames: readonly string[] = config.teamFilter.teamNames;
+    const tracked = allTournaments.filter((t) =>
+      t.teams.some((team) => teamNames.includes(team.name)),
+    );
 
     // Track discovered IDs
-    for (const t of prestigious) {
-      prestigiousTournamentIds.add(t.id);
+    for (const t of tracked) {
+      trackedTournamentIds.add(t.id);
     }
 
     // 3. Write tournament index to Redis
-    await writeTournaments(prestigious);
+    await writeTournaments(tracked);
 
-    // 4. For each prestigious tournament, fetch its series
+    // 4. For each tracked tournament, fetch its series
     const allSeries: FetchedSeries[] = [];
 
-    for (const tournament of prestigious) {
+    for (const tournament of tracked) {
       if (fullyDiscoveredTournaments.has(tournament.id)) continue;
 
       try {
@@ -79,7 +81,7 @@ const runDiscoveryCycle = async (): Promise<void> => {
     await writeDiscoveryTimestamp();
 
     logSlowCycle({
-      tournamentIds: prestigious.map((t) => t.id),
+      tournamentIds: tracked.map((t) => t.id),
       entries: [], // Simplified — the log will show tournament count
       durationMs: Date.now() - start,
     });
@@ -117,4 +119,4 @@ export const startDiscoveryLoop = async (): Promise<void> => {
   }, config.discovery.intervalMs);
 };
 
-export const getPrestigiousTournamentIds = (): Set<string> => prestigiousTournamentIds;
+export const getTrackedTournamentIds = (): Set<string> => trackedTournamentIds;

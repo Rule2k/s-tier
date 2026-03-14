@@ -18,10 +18,9 @@ export const config = {
     seriesStatePerSeries: { maxTokens: 5, refillPerMinute: 6 },
   },
 
-  /** Prestige filter — which tournaments the worker tracks */
-  prestige: {
-    minPrizePool: 100_000,
-    includeLan: true,
+  /** Team filter — only track tournaments these teams participate in */
+  teamFilter: {
+    teamNames: ["Vitality"],
   },
 
   /** Grid API pagination */

@@ -27,7 +27,7 @@ export interface FetchedTournament {
   endDate: string | null;
   prizePool: number | null;
   venueType: string | null;
-  teamCount: number;
+  teams: { id: string; name: string }[];
 }
 
 export interface FetchedSeries {

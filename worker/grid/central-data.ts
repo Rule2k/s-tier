@@ -85,7 +85,7 @@ export const fetchTournaments = async (): Promise<FetchedTournament[]> => {
         endDate: n.endDate,
         prizePool: n.prizePool?.amount ?? null,
         venueType: n.venueType,
-        teamCount: n.teams.length,
+        teams: n.teams,
       });
     }
 

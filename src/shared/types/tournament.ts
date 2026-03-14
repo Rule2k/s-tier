@@ -8,5 +8,5 @@ export interface Tournament {
   endDate: string | null;
   prizePool: number | null;
   venueType: "LAN" | "ONLINE" | "UNKNOWN";
-  teamCount: number;
+  teams: { id: string; name: string }[];
 }
