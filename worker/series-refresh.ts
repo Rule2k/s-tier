@@ -136,12 +136,17 @@ const isRateLimitError = (error: unknown): boolean => {
 
 // --- Public ---
 
+const scheduleNext = () => {
+  setTimeout(async () => {
+    await runRefreshCycle().catch((err) => logError("Series refresh loop unhandled error", err));
+    scheduleNext();
+  }, config.seriesRefresh.intervalMs);
+};
+
 export const startSeriesRefreshLoop = async (): Promise<void> => {
   // Initial run
   await runRefreshCycle();
 
-  // Then repeat
-  setInterval(() => {
-    runRefreshCycle().catch((err) => logError("Series refresh loop unhandled error", err));
-  }, config.seriesRefresh.intervalMs);
+  // Then repeat — setTimeout ensures next cycle waits for previous to finish
+  scheduleNext();
 };

@@ -105,14 +105,19 @@ const isRateLimitError = (error: unknown): boolean => {
 
 // --- Public ---
 
+const scheduleNextDiscovery = () => {
+  setTimeout(async () => {
+    await runDiscoveryCycle().catch((err) => logError("Discovery loop unhandled error", err));
+    scheduleNextDiscovery();
+  }, config.discovery.intervalMs);
+};
+
 export const startDiscoveryLoop = async (): Promise<void> => {
   // Initial run
   await runDiscoveryCycle();
 
-  // Then repeat
-  setInterval(() => {
-    runDiscoveryCycle().catch((err) => logError("Discovery loop unhandled error", err));
-  }, config.discovery.intervalMs);
+  // Then repeat — setTimeout ensures next cycle waits for previous to finish
+  scheduleNextDiscovery();
 };
 
 export const getTrackedTournamentIds = (): Set<string> => trackedTournamentIds;
