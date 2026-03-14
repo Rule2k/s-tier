@@ -51,9 +51,12 @@ export const getRemaining = (rl: RateLimit): number => {
   return Math.max(0, rl.limit - rl.count);
 };
 
-/** Force the limit to be reached (e.g. after an API 429). */
+/** Force the limit to be reached (e.g. after an API 429).
+ *  Also resets the window to now, so we wait a full 60s before retrying.
+ *  This ensures the API's own rate limit has time to reset too. */
 export const drainBucket = (rl: RateLimit): void => {
   rl.count = rl.limit;
+  rl.windowStart = Date.now();
 };
 
 // Keep old name for logger compatibility
