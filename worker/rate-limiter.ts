@@ -1,89 +1,82 @@
-import type { TokenBucket } from "./types/rate-limiter";
+import type { RateLimit } from "./types/rate-limiter";
 
-export const createBucket = (
-  maxTokens: number,
-  refillPerMinute: number,
-): TokenBucket => ({
-  tokens: maxTokens,
-  maxTokens,
-  refillRate: refillPerMinute / 60_000,
-  lastRefill: Date.now(),
+const WINDOW_MS = 60_000; // 1 minute
+
+export const createRateLimit = (limit: number): RateLimit => ({
+  limit,
+  windowMs: WINDOW_MS,
+  count: 0,
+  windowStart: Date.now(),
 });
 
-const refill = (bucket: TokenBucket, now = Date.now()): void => {
-  const elapsed = now - bucket.lastRefill;
-  if (elapsed <= 0) return;
-
-  bucket.tokens = Math.min(
-    bucket.maxTokens,
-    bucket.tokens + elapsed * bucket.refillRate,
-  );
-  bucket.lastRefill = now;
+/** Reset the window if it has elapsed. */
+const maybeResetWindow = (rl: RateLimit, now = Date.now()): void => {
+  if (now - rl.windowStart >= rl.windowMs) {
+    rl.count = 0;
+    rl.windowStart = now;
+  }
 };
 
-export const tryConsume = (bucket: TokenBucket): boolean => {
-  refill(bucket);
-
-  if (bucket.tokens >= 1) {
-    bucket.tokens -= 1;
+/** Try to consume 1 request. Returns true if allowed. */
+export const tryConsume = (rl: RateLimit): boolean => {
+  maybeResetWindow(rl);
+  if (rl.count < rl.limit) {
+    rl.count++;
     return true;
   }
-
   return false;
 };
 
-const msUntilToken = (bucket: TokenBucket): number => {
-  refill(bucket);
-
-  if (bucket.tokens >= 1) return 0;
-
-  const deficit = 1 - bucket.tokens;
-  return Math.ceil(deficit / bucket.refillRate);
-};
-
-const MAX_WAIT_MS = 30_000;
-
-export const waitForToken = async (bucket: TokenBucket): Promise<void> => {
-  if (tryConsume(bucket)) return;
-
-  const waitMs = Math.min(msUntilToken(bucket), MAX_WAIT_MS);
-  await new Promise((resolve) => setTimeout(resolve, waitMs));
-
-  if (!tryConsume(bucket)) {
-    throw new Error(
-      `[rate-limiter] Failed to acquire token after ${waitMs}ms wait`,
-    );
+/** Wait until a request slot is available, then consume it. */
+export const waitForToken = async (rl: RateLimit): Promise<void> => {
+  maybeResetWindow(rl);
+  if (rl.count < rl.limit) {
+    rl.count++;
+    return;
   }
+
+  // Wait until the current window resets
+  const waitMs = rl.windowMs - (Date.now() - rl.windowStart);
+  if (waitMs > 0) {
+    await new Promise((resolve) => setTimeout(resolve, waitMs));
+  }
+
+  maybeResetWindow(rl);
+  rl.count++;
 };
 
-export const drainBucket = (bucket: TokenBucket): void => {
-  bucket.tokens = 0;
-  bucket.lastRefill = Date.now();
+/** How many requests remain in the current window. */
+export const getRemaining = (rl: RateLimit): number => {
+  maybeResetWindow(rl);
+  return Math.max(0, rl.limit - rl.count);
 };
 
-export const getTokenCount = (bucket: TokenBucket): number => {
-  refill(bucket);
-  return Math.floor(bucket.tokens);
+/** Force the limit to be reached (e.g. after an API 429). */
+export const drainBucket = (rl: RateLimit): void => {
+  rl.count = rl.limit;
 };
+
+// Keep old name for logger compatibility
+export const getTokenCount = getRemaining;
 
 // --- Singleton instances ---
 
-// Central Data: 20 req/min, cap at 18 (10% margin)
-export const centralBucket = createBucket(18, 20);
+/** Central Data API: 20 req/min */
+export const centralBucket = createRateLimit(20);
 
-// Live Series State (global): 180 req/min, cap at 162 (10% margin)
-export const liveGlobalBucket = createBucket(162, 180);
+/** Live Series State API (global): 180 req/min */
+export const liveGlobalBucket = createRateLimit(180);
 
-// Live Series State (per series): 6 req/min, cap at 5 (margin)
-const livePerSeriesBuckets = new Map<string, TokenBucket>();
+/** Live Series State API (per series): 6 req/min */
+const livePerSeriesBuckets = new Map<string, RateLimit>();
 
-export const getLivePerSeriesBucket = (seriesId: string): TokenBucket => {
-  let bucket = livePerSeriesBuckets.get(seriesId);
-  if (!bucket) {
-    bucket = createBucket(5, 6);
-    livePerSeriesBuckets.set(seriesId, bucket);
+export const getLivePerSeriesBucket = (seriesId: string): RateLimit => {
+  let rl = livePerSeriesBuckets.get(seriesId);
+  if (!rl) {
+    rl = createRateLimit(6);
+    livePerSeriesBuckets.set(seriesId, rl);
   }
-  return bucket;
+  return rl;
 };
 
 export const cleanupPerSeriesBuckets = (

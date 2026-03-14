@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import {
-  createBucket,
+  createRateLimit,
   tryConsume,
   waitForToken,
   drainBucket,
-  getTokenCount,
+  getRemaining,
   cleanupPerSeriesBuckets,
   getLivePerSeriesBucket,
   getPerSeriesBucketsSize,
@@ -19,124 +19,92 @@ describe("rate-limiter", () => {
     vi.useRealTimers();
   });
 
-  describe("createBucket", () => {
-    it("initializes with max tokens", () => {
-      const bucket = createBucket(10, 60);
-      expect(bucket.tokens).toBe(10);
-      expect(bucket.maxTokens).toBe(10);
-      expect(bucket.refillRate).toBe(60 / 60_000); // 1 per second
+  describe("createRateLimit", () => {
+    it("initializes with zero count", () => {
+      const rl = createRateLimit(10);
+      expect(rl.count).toBe(0);
+      expect(rl.limit).toBe(10);
     });
   });
 
   describe("tryConsume", () => {
-    it("consumes a token when available", () => {
-      const bucket = createBucket(5, 60);
-      expect(tryConsume(bucket)).toBe(true);
-      expect(getTokenCount(bucket)).toBe(4);
+    it("consumes a request when under limit", () => {
+      const rl = createRateLimit(5);
+      expect(tryConsume(rl)).toBe(true);
+      expect(getRemaining(rl)).toBe(4);
     });
 
-    it("fails when bucket is empty", () => {
-      const bucket = createBucket(2, 60);
-      expect(tryConsume(bucket)).toBe(true);
-      expect(tryConsume(bucket)).toBe(true);
-      expect(tryConsume(bucket)).toBe(false);
+    it("fails when limit is reached", () => {
+      const rl = createRateLimit(2);
+      expect(tryConsume(rl)).toBe(true);
+      expect(tryConsume(rl)).toBe(true);
+      expect(tryConsume(rl)).toBe(false);
     });
 
-    it("can drain all tokens one by one", () => {
-      const bucket = createBucket(3, 60);
-      expect(tryConsume(bucket)).toBe(true);
-      expect(tryConsume(bucket)).toBe(true);
-      expect(tryConsume(bucket)).toBe(true);
-      expect(tryConsume(bucket)).toBe(false);
-    });
-  });
+    it("resets after window elapses", () => {
+      const rl = createRateLimit(2);
+      tryConsume(rl);
+      tryConsume(rl);
+      expect(tryConsume(rl)).toBe(false);
 
-  describe("refill", () => {
-    it("refills tokens over time", () => {
-      const bucket = createBucket(10, 60); // 1 token/sec
-      // Drain all
-      for (let i = 0; i < 10; i++) tryConsume(bucket);
-      expect(getTokenCount(bucket)).toBe(0);
-
-      // Advance 3 seconds → should have 3 tokens
-      vi.advanceTimersByTime(3000);
-      expect(getTokenCount(bucket)).toBe(3);
-    });
-
-    it("does not exceed maxTokens", () => {
-      const bucket = createBucket(5, 60);
-      // Already full, advance time
+      // Advance past the 1-minute window
       vi.advanceTimersByTime(60_000);
-      expect(getTokenCount(bucket)).toBe(5);
-    });
-
-    it("refills fractionally", () => {
-      const bucket = createBucket(10, 60); // 1/sec
-      for (let i = 0; i < 10; i++) tryConsume(bucket);
-
-      vi.advanceTimersByTime(500); // 0.5 tokens — floor → 0
-      expect(getTokenCount(bucket)).toBe(0);
-
-      vi.advanceTimersByTime(500); // 1.0 tokens total
-      expect(getTokenCount(bucket)).toBe(1);
+      expect(tryConsume(rl)).toBe(true);
+      expect(getRemaining(rl)).toBe(1);
     });
   });
 
   describe("waitForToken", () => {
-    it("resolves immediately when tokens are available", async () => {
-      const bucket = createBucket(5, 60);
-      await waitForToken(bucket);
-      expect(getTokenCount(bucket)).toBe(4);
+    it("resolves immediately when under limit", async () => {
+      const rl = createRateLimit(5);
+      await waitForToken(rl);
+      expect(getRemaining(rl)).toBe(4);
     });
 
-    it("waits for refill when bucket is empty", async () => {
-      const bucket = createBucket(1, 60); // 1/sec
-      tryConsume(bucket); // drain it
+    it("waits for next window when limit is reached", async () => {
+      const rl = createRateLimit(1);
+      tryConsume(rl); // use the one allowed request
 
-      const promise = waitForToken(bucket);
+      const promise = waitForToken(rl);
 
-      // Advance past the refill time (1 second for 1 token at 60/min)
-      vi.advanceTimersByTime(1100);
+      // Advance past the window
+      vi.advanceTimersByTime(60_000);
       await promise;
 
-      // Token was consumed by waitForToken
-      expect(getTokenCount(bucket)).toBe(0);
+      expect(rl.count).toBe(1); // consumed in the new window
     });
   });
 
   describe("drainBucket", () => {
-    it("empties all tokens", () => {
-      const bucket = createBucket(10, 60);
-      drainBucket(bucket);
-      expect(getTokenCount(bucket)).toBe(0);
-      expect(tryConsume(bucket)).toBe(false);
+    it("sets count to limit so no more requests are allowed", () => {
+      const rl = createRateLimit(10);
+      drainBucket(rl);
+      expect(getRemaining(rl)).toBe(0);
+      expect(tryConsume(rl)).toBe(false);
     });
   });
 
-  describe("burst behavior", () => {
-    it("allows burst up to maxTokens", () => {
-      const bucket = createBucket(18, 20); // central bucket config
+  describe("window behavior", () => {
+    it("allows full limit per window", () => {
+      const rl = createRateLimit(20);
       let consumed = 0;
-      while (tryConsume(bucket)) consumed++;
-      expect(consumed).toBe(18);
+      while (tryConsume(rl)) consumed++;
+      expect(consumed).toBe(20);
     });
 
-    it("recovers after burst", () => {
-      const bucket = createBucket(18, 20); // 20/min = 1 per 3s
-      while (tryConsume(bucket)); // drain
+    it("resets fully after window", () => {
+      const rl = createRateLimit(20);
+      while (tryConsume(rl)); // drain
 
-      vi.advanceTimersByTime(3000); // ~1 token
-      expect(getTokenCount(bucket)).toBe(1);
-
-      vi.advanceTimersByTime(57_000); // 60s total → 20 tokens but capped at 18
-      expect(getTokenCount(bucket)).toBe(18);
+      vi.advanceTimersByTime(60_000);
+      expect(getRemaining(rl)).toBe(20);
     });
   });
 
   describe("per-series buckets", () => {
     it("creates a bucket on first access", () => {
-      const bucket = getLivePerSeriesBucket("series-new-test");
-      expect(bucket.maxTokens).toBe(5);
+      const rl = getLivePerSeriesBucket("series-new-test");
+      expect(rl.limit).toBe(6);
       expect(getPerSeriesBucketsSize()).toBeGreaterThanOrEqual(1);
     });
 
@@ -152,12 +120,11 @@ describe("rate-limiter", () => {
       getLivePerSeriesBucket("series-cleanup-inactive");
       expect(getPerSeriesBucketsSize()).toBe(sizeBefore + 2);
 
-      // Keep only the active one + all previously created ones
       const active = new Set(["series-cleanup-active", "series-new-test", "series-stable-test"]);
       const removed = cleanupPerSeriesBuckets(active);
 
-      expect(removed).toBe(1); // only series-cleanup-inactive removed
-      expect(getLivePerSeriesBucket("series-cleanup-active").maxTokens).toBe(5);
+      expect(removed).toBe(1);
+      expect(getLivePerSeriesBucket("series-cleanup-active").limit).toBe(6);
     });
   });
 });

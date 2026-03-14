@@ -6,7 +6,7 @@ import {
   classifyTier,
 } from "./scheduler";
 import {
-  tryConsume,
+  waitForToken,
   liveGlobalBucket,
   getLivePerSeriesBucket,
   drainBucket,
@@ -35,19 +35,12 @@ const runRefreshCycle = async (): Promise<void> => {
       eligible[tier]++;
     }
 
-    // Cap fetches per cycle to avoid draining the API budget in one long cycle
-    const MAX_FETCHES_PER_CYCLE = 50;
-    let fetchCount = 0;
-
     for (const { entry, tier } of series) {
-      if (fetchCount >= MAX_FETCHES_PER_CYCLE) break;
-      if (!tryConsume(liveGlobalBucket) || !tryConsume(getLivePerSeriesBucket(entry.seriesId))) {
-        break;
-      }
+      await waitForToken(liveGlobalBucket);
+      await waitForToken(getLivePerSeriesBucket(entry.seriesId));
 
       try {
         const state = await fetchSeriesState(entry.seriesId);
-        fetchCount++;
 
         if (state) {
           // Update scheduler registry
