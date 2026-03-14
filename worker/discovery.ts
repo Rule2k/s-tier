@@ -129,20 +129,22 @@ const hydrateSchedulerFromRedis = async (): Promise<void> => {
 
       const tournament = JSON.parse(tournamentJson);
 
-      // Batch-read all series data
+      // Batch-read all series data + states
       const pipeline = redis.pipeline();
       for (const id of seriesIds) {
         pipeline.get(REDIS_KEYS.series(id));
+        pipeline.get(REDIS_KEYS.seriesState(id));
       }
       const results = await pipeline.exec();
       if (!results) continue;
 
       for (let i = 0; i < seriesIds.length; i++) {
-        const seriesJson = results[i]?.[1] as string | null;
+        const seriesJson = results[i * 2]?.[1] as string | null;
+        const stateJson = results[i * 2 + 1]?.[1] as string | null;
         if (!seriesJson) continue;
 
         const s = JSON.parse(seriesJson);
-        upsertSeries(tournamentId, {
+        const entry = upsertSeries(tournamentId, {
           id: s.id,
           startTimeScheduled: s.startTimeScheduled,
           format: { nameShortened: s.format ?? "Bo1" },
@@ -156,6 +158,27 @@ const hydrateSchedulerFromRedis = async (): Promise<void> => {
             baseInfo: { id: t.id, name: t.name, logoUrl: t.logoUrl ?? "" },
           })),
         });
+
+        // Restore state so live/finished series get correct priority
+        if (stateJson) {
+          const state = JSON.parse(stateJson);
+          entry.state = {
+            id: state.seriesId,
+            started: state.started,
+            finished: state.finished,
+            teams: state.teams,
+            games: (state.games ?? []).map((g: any) => ({
+              sequenceNumber: g.sequenceNumber,
+              started: g.started,
+              finished: g.finished,
+              map: { name: g.mapName },
+              teams: (g.teams ?? []).map((t: any) => ({ score: t.score, side: t.side })),
+            })),
+          };
+          entry.lastFetchedAt = Date.now();
+          if (state.finished) entry.noStateConfirmed = true;
+        }
+
         totalSeries++;
       }
 
