@@ -84,7 +84,12 @@ const runRefreshCycle = async (): Promise<void> => {
         entry.lastFetchedAt = Date.now();
 
         if (isRateLimitError(error)) {
-          drainBucket(liveGlobalBucket);
+          const headers = (error as any)?.response?.headers;
+          const resetSeconds = parseInt(headers?.get?.("x-ratelimit-reset") ?? "60", 10);
+          const totalFetched = Object.values(fetched).reduce((a, b) => a + b, 0);
+          console.log(`[refresh] Rate limited after ${totalFetched} fetches — waiting ${resetSeconds}s`);
+
+          await new Promise((resolve) => setTimeout(resolve, resetSeconds * 1000));
           break;
         }
       }

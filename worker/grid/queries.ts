@@ -67,8 +67,6 @@ export const seriesStateQuery = `
       format
       started
       finished
-      forfeited
-      valid
       teams {
         id
         name

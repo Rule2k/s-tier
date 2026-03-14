@@ -20,7 +20,7 @@ export const logFastCycle = (stats: FastCycleStats): void => {
       `, P1: ${fetched.P1}/${eligible.P1}` +
       `, P2: ${fetched.P2}/${eligible.P2}` +
       `, P3: ${fetched.P3}/${eligible.P3}` +
-      ` — budget: ${liveBudget}/180 live, ${centralBudget}/20 central`,
+      ` — remaining: ${liveBudget}/180 live, ${centralBudget}/20 central`,
   );
 };
 

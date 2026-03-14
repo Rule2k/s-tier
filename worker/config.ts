@@ -11,13 +11,6 @@ export const config = {
     intervalMs: 15_000, // 15s between cycles
   },
 
-  /** Rate limit budgets (tokens per minute, with safety margin) */
-  rateLimits: {
-    centralData: { maxTokens: 18, refillPerMinute: 20 },
-    seriesStateGlobal: { maxTokens: 162, refillPerMinute: 180 },
-    seriesStatePerSeries: { maxTokens: 5, refillPerMinute: 6 },
-  },
-
   /** Team filter — only track tournaments these teams participate in */
   teamFilter: {
     teamIds: [

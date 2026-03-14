@@ -39,8 +39,6 @@ interface GridSeriesState {
   format: string;
   started: boolean;
   finished: boolean;
-  forfeited: boolean;
-  valid: boolean;
   teams: GridSeriesStateTeam[];
   games: GridGame[];
   draftActions: GridDraftAction[];
