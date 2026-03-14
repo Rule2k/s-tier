@@ -6,6 +6,7 @@ import {
   classifyTier,
 } from "./scheduler";
 import {
+  tryConsume,
   waitForToken,
   liveGlobalBucket,
   getLivePerSeriesBucket,
@@ -36,8 +37,10 @@ const runRefreshCycle = async (): Promise<void> => {
     }
 
     for (const { entry, tier } of series) {
-      await waitForToken(liveGlobalBucket);
-      await waitForToken(getLivePerSeriesBucket(entry.seriesId));
+      // Non-blocking: process only what the rate limit allows right now
+      if (!tryConsume(liveGlobalBucket) || !tryConsume(getLivePerSeriesBucket(entry.seriesId))) {
+        break;
+      }
 
       try {
         const state = await fetchSeriesState(entry.seriesId);
