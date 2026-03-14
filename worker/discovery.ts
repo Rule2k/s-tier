@@ -1,6 +1,6 @@
 import { discoverTournaments, fetchTournamentSeries } from "./grid/central-data";
 import { writeTournaments, writeTournamentSeries, writeDiscoveryTimestamp } from "./redis-writer";
-import { upsertSeries, getSeriesForTournament } from "./scheduler";
+import { upsertSeries, getSeriesForTournament, getRegistry } from "./scheduler";
 import { logError } from "./logger";
 import { drainBucket, centralBucket } from "./rate-limiter";
 import { config } from "./config";
@@ -186,7 +186,18 @@ const hydrateSchedulerFromRedis = async (): Promise<void> => {
       fullyDiscoveredTournaments.add(tournamentId);
     }
 
-    console.log(`[discovery] Hydrated ${totalSeries} series from ${tournamentIds.length} tournaments in Redis`);
+    // Count states
+    let withState = 0;
+    let finished = 0;
+    let live = 0;
+    for (const entry of getRegistry().values()) {
+      if (entry.state) {
+        withState++;
+        if (entry.state.finished) finished++;
+        if (entry.state.started && !entry.state.finished) live++;
+      }
+    }
+    console.log(`[discovery] Hydrated ${totalSeries} series from ${tournamentIds.length} tournaments — ${withState} with state (${finished} finished, ${live} live, ${totalSeries - withState} without state)`);
   } catch (error) {
     logError("Failed to hydrate scheduler from Redis", error);
   }

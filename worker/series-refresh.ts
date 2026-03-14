@@ -3,15 +3,13 @@ import { writeSeriesState, writeSeriesMeta, writeHeartbeat } from "./redis-write
 import {
   getEligibleSeries,
   getRegistry,
-  classifyTier,
 } from "./scheduler";
 import {
   tryConsume,
-  waitForToken,
   liveGlobalBucket,
   getLivePerSeriesBucket,
-  drainBucket,
   cleanupPerSeriesBuckets,
+  getRemaining,
 } from "./rate-limiter";
 import { logFastCycle, logError } from "./logger";
 import { config } from "./config";
@@ -28,6 +26,9 @@ const runRefreshCycle = async (): Promise<void> => {
 
   const fetched: Record<string, number> = { P0: 0, P1: 0, P2: 0, P3: 0 };
   const eligible: Record<string, number> = { P0: 0, P1: 0, P2: 0, P3: 0 };
+  let errors = 0;
+  let rateLimited = false;
+  let budgetExhausted = false;
 
   try {
     const series = getEligibleSeries();
@@ -37,11 +38,13 @@ const runRefreshCycle = async (): Promise<void> => {
     }
 
     const totalEligible = Object.values(eligible).reduce((a, b) => a + b, 0);
-    console.log(`[refresh] Cycle #${cycleNumber} starting — ${totalEligible} eligible (P0: ${eligible.P0}, P1: ${eligible.P1}, P2: ${eligible.P2}, P3: ${eligible.P3})`);
+    const registrySize = getRegistry().size;
+    console.log(`[refresh] Cycle #${cycleNumber} — ${totalEligible} eligible out of ${registrySize} registered (P0: ${eligible.P0}, P1: ${eligible.P1}, P2: ${eligible.P2}, P3: ${eligible.P3}) — budget: ${getRemaining(liveGlobalBucket)}/180`);
 
     for (const { entry, tier } of series) {
       // Non-blocking: process only what the rate limit allows right now
       if (!tryConsume(liveGlobalBucket) || !tryConsume(getLivePerSeriesBucket(entry.seriesId))) {
+        budgetExhausted = true;
         break;
       }
 
@@ -49,7 +52,6 @@ const runRefreshCycle = async (): Promise<void> => {
         const state = await fetchSeriesState(entry.seriesId);
 
         if (state) {
-          // Update scheduler registry
           entry.state = {
             id: state.seriesId,
             started: state.started,
@@ -67,10 +69,8 @@ const runRefreshCycle = async (): Promise<void> => {
           entry.failCount = 0;
           fetched[tier]++;
 
-          // Write to Redis
           await writeSeriesState(entry.seriesId, state);
 
-          // Determine status label for meta
           const status = state.finished
             ? "past"
             : state.started
@@ -79,7 +79,6 @@ const runRefreshCycle = async (): Promise<void> => {
           await writeSeriesMeta(entry.seriesId, status);
         } else {
           entry.lastFetchedAt = Date.now();
-          // API returned null — if the series is in the past, it won't ever have state
           const scheduled = new Date(entry.gridSeries.startTimeScheduled).getTime();
           if (scheduled < Date.now()) {
             entry.noStateConfirmed = true;
@@ -88,15 +87,21 @@ const runRefreshCycle = async (): Promise<void> => {
       } catch (error) {
         entry.failCount++;
         entry.lastFetchedAt = Date.now();
+        errors++;
 
         if (isRateLimitError(error)) {
           const headers = (error as any)?.response?.headers;
           const resetSeconds = parseInt(headers?.get?.("x-ratelimit-reset") ?? "60", 10);
-          const totalFetched = Object.values(fetched).reduce((a, b) => a + b, 0);
-          console.log(`[refresh] Rate limited after ${totalFetched} fetches — waiting ${resetSeconds}s`);
-
+          console.log(`[refresh] API rate limited — waiting ${resetSeconds}s`);
+          rateLimited = true;
           await new Promise((resolve) => setTimeout(resolve, resetSeconds * 1000));
           break;
+        }
+
+        // Log first non-rate-limit error per cycle
+        if (errors <= 3) {
+          const msg = error instanceof Error ? error.message.slice(0, 200) : String(error).slice(0, 200);
+          console.log(`[refresh] Error on series ${entry.seriesId}: ${msg}`);
         }
       }
     }
@@ -108,15 +113,12 @@ const runRefreshCycle = async (): Promise<void> => {
     }
     cleanupPerSeriesBuckets(activeIds);
 
-    // Heartbeat
     await writeHeartbeat();
 
-    logFastCycle({
-      cycleNumber,
-      durationMs: Date.now() - start,
-      fetched: fetched as { P0: number; P1: number; P2: number; P3: number },
-      eligible: eligible as { P0: number; P1: number; P2: number; P3: number },
-    });
+    const totalFetched = Object.values(fetched).reduce((a, b) => a + b, 0);
+    const duration = ((Date.now() - start) / 1000).toFixed(1);
+    const stopReason = rateLimited ? "rate-limited" : budgetExhausted ? "budget-exhausted" : "done";
+    console.log(`[refresh] Cycle #${cycleNumber} finished in ${duration}s — fetched: ${totalFetched}, errors: ${errors}, stop: ${stopReason} — budget: ${getRemaining(liveGlobalBucket)}/180`);
   } catch (error) {
     logError(`Series refresh cycle #${cycleNumber} failed`, error);
   }
@@ -145,9 +147,8 @@ const scheduleNext = () => {
 };
 
 export const startSeriesRefreshLoop = async (): Promise<void> => {
-  // Initial run
+  console.log("[refresh] Starting series refresh loop");
   await runRefreshCycle();
-
-  // Then repeat — setTimeout ensures next cycle waits for previous to finish
+  console.log("[refresh] First cycle complete, scheduling next");
   scheduleNext();
 };
