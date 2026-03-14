@@ -175,8 +175,12 @@ const hydrateSchedulerFromRedis = async (): Promise<void> => {
               teams: (g.teams ?? []).map((t: any) => ({ score: t.score, side: t.side })),
             })),
           };
-          entry.lastFetchedAt = Date.now();
-          if (state.finished) entry.noStateConfirmed = true;
+          // Live series: lastFetchedAt = 0 so they refresh immediately
+          // Finished series: lastFetchedAt = now (no rush to re-fetch)
+          if (state.finished) {
+            entry.lastFetchedAt = Date.now();
+            entry.noStateConfirmed = true;
+          }
         }
 
         totalSeries++;
