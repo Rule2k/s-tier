@@ -11,7 +11,8 @@ import {
 import { DateSeparator } from "@/components/timeline/DateSeparator";
 import { MatchCard } from "@/components/timeline/MatchCard";
 import { groupMatchesByDate } from "@/utils/matches/groupByDate";
-import { getTournamentStatus, type TournamentStatus } from "@/utils/tournaments/getTournamentStatus";
+import { getTournamentStatus } from "@/utils/tournaments/getTournamentStatus";
+import type { TournamentStatus } from "@/types/match";
 import { getTournamentSummary } from "@/utils/tournaments/getTournamentSummary";
 import type { TournamentView } from "@/types/match";
 

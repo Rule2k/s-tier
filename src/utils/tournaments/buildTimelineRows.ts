@@ -1,10 +1,6 @@
 import { getTournamentEndDate } from "./getTournamentEndDate";
 import { getTournamentStartDate } from "./getTournamentStartDate";
-import type { Tournament } from "@/types/match";
-
-export interface TimelineRow {
-  tournaments: Tournament[];
-}
+import type { Tournament, TimelineRow } from "@/types/match";
 
 export const buildTimelineRows = (tournaments: Tournament[]): TimelineRow[] => {
   const rows: TimelineRow[] = [];

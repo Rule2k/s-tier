@@ -1,5 +1,5 @@
 import { getTokenCount, centralBucket, liveGlobalBucket } from "./rate-limiter";
-import type { SeriesEntry } from "./scheduler";
+import type { SeriesEntry } from "./types/scheduler";
 
 interface FastCycleStats {
   cycleNumber: number;

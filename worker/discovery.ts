@@ -5,7 +5,7 @@ import { upsertSeries } from "./scheduler";
 import { logSlowCycle, logError } from "./logger";
 import { drainBucket, centralBucket } from "./rate-limiter";
 import { config } from "./config";
-import type { FetchedTournament, FetchedSeries } from "./grid/central-data";
+import type { FetchedSeries } from "./types/grid";
 
 // --- State ---
 

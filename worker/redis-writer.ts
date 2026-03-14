@@ -1,7 +1,6 @@
 import redis from "../src/lib/redis/client";
 import { REDIS_KEYS, REDIS_TTL } from "../src/shared/redis-keys";
-import type { FetchedTournament, FetchedSeries } from "./grid/central-data";
-import type { FetchedSeriesState } from "./grid/series-state";
+import type { FetchedTournament, FetchedSeries, FetchedSeriesState } from "./types/grid";
 import { logError } from "./logger";
 
 // --- Tournament index (Sorted Set) ---

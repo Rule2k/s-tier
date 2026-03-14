@@ -1,15 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import type { Tournament } from "@/types/match";
-
-// --- Response type from /api/tournaments ---
-
-export interface TournamentsResponse {
-  tournaments: Tournament[];
-  hasMore: boolean;
-  total: number;
-}
+import type { Tournament, TournamentsResponse } from "@/types/match";
 
 // --- Hooks ---
 

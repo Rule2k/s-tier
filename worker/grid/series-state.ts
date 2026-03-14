@@ -1,5 +1,6 @@
 import { liveClient } from "./client";
 import { seriesStateQuery } from "./queries";
+import type { FetchedSeriesState } from "../types/grid";
 
 // --- Grid response types (Series State specific) ---
 
@@ -50,28 +51,6 @@ interface GridSeriesState {
 
 interface GridSeriesStateResponse {
   seriesState: GridSeriesState | null;
-}
-
-// --- Public types ---
-
-export interface FetchedSeriesState {
-  seriesId: string;
-  format: string;
-  started: boolean;
-  finished: boolean;
-  teams: { id: string; name: string; score: number; won: boolean }[];
-  games: {
-    id: string;
-    sequenceNumber: number;
-    mapName: string;
-    started: boolean;
-    finished: boolean;
-    teams: { id: string; name: string; side: string; score: number; won: boolean }[];
-  }[];
-  draftActions: { id: string; type: string }[];
-  updatedAt: string;
-  startedAt: string | null;
-  duration: string;
 }
 
 // --- Fetch series state ---

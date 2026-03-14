@@ -38,6 +38,28 @@ export interface MapScore {
   sides: [string, string];
 }
 
+// --- Tournament status (used by TournamentBlock) ---
+
+export type TournamentStatus =
+  | { type: "finished"; winner: { name: string; logoUrl: string | null } | null }
+  | { type: "live"; count: number }
+  | { type: "in_progress" }
+  | { type: "upcoming" };
+
+// --- Timeline row (used by timeline components) ---
+
+export interface TimelineRow {
+  tournaments: Tournament[];
+}
+
+// --- API response for /api/tournaments ---
+
+export interface TournamentsResponse {
+  tournaments: Tournament[];
+  hasMore: boolean;
+  total: number;
+}
+
 // Lightweight summary for index navigation (load previous/next)
 export interface TournamentSummary {
   id: string;

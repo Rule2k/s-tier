@@ -1,26 +1,5 @@
-// Minimal interfaces used by the scheduler registry.
-// The worker fetchers (grid/central-data, grid/series-state) return richer types
-// that are narrowed to these when stored in the registry.
-
-export interface GridSeries {
-  id: string;
-  startTimeScheduled: string;
-  format: { nameShortened: string };
-  tournament: { id: string; name: string; nameShortened: string; logoUrl: string };
-  teams: { baseInfo: { id: string; name: string; nameShortened?: string; logoUrl: string } }[];
-}
-
-export interface GridSeriesState {
-  id: string;
-  started: boolean;
-  finished: boolean;
-  teams: { id: string; name: string; score: number }[];
-  games: { sequenceNumber: number; started: boolean; finished: boolean; map: { name: string }; teams: { score: number; side: string }[] }[];
-}
-
-// --- Priority tiers ---
-
-export type PriorityTier = "P0" | "P1" | "P2" | "P3" | "SKIP";
+import type { GridSeries, GridSeriesState } from "./types/grid";
+import type { PriorityTier, SeriesEntry, EligibleSeries, TierCounts } from "./types/scheduler";
 
 const THIRTY_MINUTES_MS = 30 * 60 * 1000;
 const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000;
@@ -56,15 +35,6 @@ export const classifyTier = (
 };
 
 // --- Series registry ---
-
-export interface SeriesEntry {
-  seriesId: string;
-  tournamentId: string;
-  gridSeries: GridSeries;
-  state: GridSeriesState | null;
-  lastFetchedAt: number;
-  failCount: number;
-}
 
 const registry = new Map<string, SeriesEntry>();
 
@@ -128,12 +98,6 @@ const getEffectiveInterval = (entry: SeriesEntry, tier: PriorityTier): number =>
   return Math.max(base, backoff);
 };
 
-export interface EligibleSeries {
-  entry: SeriesEntry;
-  tier: PriorityTier;
-  staleness: number; // ms since last fetch
-}
-
 export const getEligibleSeries = (now = Date.now()): EligibleSeries[] => {
   const eligible: EligibleSeries[] = [];
 
@@ -171,14 +135,6 @@ export const getEligibleSeries = (now = Date.now()): EligibleSeries[] => {
 };
 
 // --- Stats ---
-
-export interface TierCounts {
-  P0: number;
-  P1: number;
-  P2: number;
-  P3: number;
-  SKIP: number;
-}
 
 export const getTierCounts = (now = Date.now()): TierCounts => {
   const counts: TierCounts = { P0: 0, P1: 0, P2: 0, P3: 0, SKIP: 0 };

@@ -1,5 +1,5 @@
 import { config } from "./config";
-import type { FetchedTournament } from "./grid/central-data";
+import type { FetchedTournament } from "./types/grid";
 
 /** Returns true if a tournament qualifies as "prestigious" (worth tracking). */
 export const isPrestigious = (tournament: FetchedTournament): boolean =>

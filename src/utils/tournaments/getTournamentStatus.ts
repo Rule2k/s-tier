@@ -1,10 +1,4 @@
-import type { Match } from "@/types/match";
-
-export type TournamentStatus =
-  | { type: "finished"; winner: { name: string; logoUrl: string | null } | null }
-  | { type: "live"; count: number }
-  | { type: "in_progress" }
-  | { type: "upcoming" };
+import type { Match, TournamentStatus } from "@/types/match";
 
 export const getTournamentStatus = (matches: Match[]): TournamentStatus => {
   const liveCount = matches.filter((match) => match.status === "running").length;

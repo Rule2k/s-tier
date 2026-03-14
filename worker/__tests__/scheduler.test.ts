@@ -10,7 +10,7 @@ import {
   removeSeriesNotIn,
   TIER_INTERVALS,
 } from "../scheduler";
-import type { SeriesEntry } from "../scheduler";
+import type { SeriesEntry } from "../types/scheduler";
 
 // Inline Grid types — will be replaced by worker/grid/ types in Phase 1
 type GridSeries = SeriesEntry["gridSeries"];

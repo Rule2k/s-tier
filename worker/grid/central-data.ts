@@ -2,6 +2,7 @@ import { centralClient } from "./client";
 import { tournamentsQuery, allSeriesQuery } from "./queries";
 import { config } from "../config";
 import { waitForToken, centralBucket } from "../rate-limiter";
+import type { FetchedTournament, FetchedSeries } from "../types/grid";
 
 // --- Grid response types (Central Data specific) ---
 
@@ -48,30 +49,6 @@ interface GridAllSeriesResponse {
     edges: GridSeriesEdge[];
     pageInfo: { hasNextPage: boolean; endCursor: string | null };
   };
-}
-
-// --- Public types ---
-
-export interface FetchedTournament {
-  id: string;
-  name: string;
-  nameShortened: string;
-  logoUrl: string | null;
-  startDate: string | null;
-  endDate: string | null;
-  prizePool: number | null;
-  venueType: string | null;
-  teamCount: number;
-}
-
-export interface FetchedSeries {
-  id: string;
-  tournamentId: string;
-  startTimeScheduled: string;
-  format: string;
-  type: string;
-  teams: { id: string; name: string }[];
-  streams: string[];
 }
 
 // --- Fetch tournaments (paginated) ---

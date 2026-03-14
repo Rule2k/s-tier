@@ -1,9 +1,4 @@
-export interface TokenBucket {
-  tokens: number;
-  maxTokens: number;
-  refillRate: number; // tokens per ms
-  lastRefill: number; // timestamp
-}
+import type { TokenBucket } from "./types/rate-limiter";
 
 export const createBucket = (
   maxTokens: number,
