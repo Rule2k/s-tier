@@ -8,7 +8,7 @@ const cardStyleByStatus: Record<Match["status"], string> = {
   running:
     "border-red-500/40 bg-[linear-gradient(180deg,rgba(72,8,12,0.32),rgba(20,8,12,0.22))] shadow-[0_0_18px_-4px] shadow-red-500/15",
   not_started:
-    "border-blue-400/28 bg-[linear-gradient(180deg,rgba(10,18,34,0.78),rgba(6,12,24,0.68))]",
+    "border-white/[0.07] bg-[linear-gradient(180deg,rgba(12,20,32,0.74),rgba(7,13,24,0.6))]",
   finished:
     "border-white/[0.05] bg-[linear-gradient(180deg,rgba(12,20,32,0.74),rgba(7,13,24,0.6))]",
 };

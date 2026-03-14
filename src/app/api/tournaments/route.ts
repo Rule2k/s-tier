@@ -154,12 +154,12 @@ const mapSeriesToMatch = (
   const status = deriveStatus(state);
 
   const teams: MatchTeam[] = (series.teams ?? []).map(
-    (team: { id: string; name: string }, index: number) => {
+    (team: { id: string; name: string; logoUrl?: string | null }, index: number) => {
       const stateTeam = state?.teams?.[index];
       return {
         name: team.name,
         shortName: team.name,
-        logoUrl: null,
+        logoUrl: team.logoUrl || null,
         score: stateTeam?.score ?? null,
         isWinner: stateTeam?.won ?? false,
       };

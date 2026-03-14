@@ -37,7 +37,7 @@ export interface GridSeriesNode {
   startTimeScheduled: string;
   format: { name: string; nameShortened: string };
   type: string;
-  teams: { baseInfo: { id: string; name: string } }[];
+  teams: { baseInfo: { id: string; name: string; logoUrl: string | null } }[];
   streams: { url: string }[];
 }
 
@@ -151,7 +151,7 @@ export const fetchTournamentSeries = async (
         startTimeScheduled: n.startTimeScheduled,
         format: n.format.nameShortened,
         type: n.type,
-        teams: n.teams.map((t: GridSeriesEdge["node"]["teams"][number]) => ({ id: t.baseInfo.id, name: t.baseInfo.name })),
+        teams: n.teams.map((t: GridSeriesEdge["node"]["teams"][number]) => ({ id: t.baseInfo.id, name: t.baseInfo.name, logoUrl: t.baseInfo.logoUrl })),
         streams: n.streams.map((s: { url: string }) => s.url),
       });
     }

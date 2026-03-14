@@ -56,7 +56,7 @@ const runDiscoveryCycle = async (): Promise<void> => {
               logoUrl: tournament.logoUrl ?? "",
             },
             teams: s.teams.map((t) => ({
-              baseInfo: { id: t.id, name: t.name, logoUrl: "" },
+              baseInfo: { id: t.id, name: t.name, logoUrl: t.logoUrl ?? "" },
             })),
           });
         }

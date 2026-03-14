@@ -46,7 +46,7 @@ export const allSeriesQuery = `
           format { name nameShortened }
           type
           teams {
-            baseInfo { id name }
+            baseInfo { id name logoUrl }
           }
           streams { url }
         }

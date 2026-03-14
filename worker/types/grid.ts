@@ -36,7 +36,7 @@ export interface FetchedSeries {
   startTimeScheduled: string;
   format: string;
   type: string;
-  teams: { id: string; name: string }[];
+  teams: { id: string; name: string; logoUrl: string | null }[];
   streams: string[];
 }
 

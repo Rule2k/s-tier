@@ -31,33 +31,26 @@ export const useTournamentNavigation = () => {
     [defaultTournaments, extraTournaments],
   );
 
-  // There are earlier tournaments if the first loaded isn't the first overall
+  // Redis returns tournaments most-recent-first (offset 0 = newest).
+  // "Load earlier" = fetch the next one in that descending order.
   const hasPrevious = useMemo(() => {
-    if (!allLoaded.length || total === 0) return false;
-    return allLoaded.length < total && defaultTournaments.length > 0;
-  }, [allLoaded, total, defaultTournaments]);
-
-  // There are later tournaments if we haven't loaded them all
-  const hasNext = useMemo(() => {
     if (!allLoaded.length || total === 0) return false;
     return allLoaded.length < total;
   }, [allLoaded, total]);
+
+  // No "load next" — initial fetch already starts from the most recent
+  const hasNext = false;
 
   const loadDirection = useCallback(
     async (direction: "previous" | "next") => {
       if (loadingDirection) return;
 
-      // Calculate what offset to fetch based on what we already have
-      const currentCount = allLoaded.length;
-      const offset =
-        direction === "next"
-          ? currentCount
-          : Math.max(0, currentCount - PAGE_SIZE);
+      const offset = allLoaded.length;
 
       setLoadingDirection(direction);
       try {
         const response = await fetch(
-          `/api/tournaments?limit=1&offset=${direction === "next" ? currentCount : Math.max(0, offset - 1)}`,
+          `/api/tournaments?limit=1&offset=${offset}`,
         );
         if (!response.ok) throw new Error("Failed to load tournament");
         const data = await response.json();

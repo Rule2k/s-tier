@@ -45,7 +45,7 @@ const TournamentStatusBadge = ({ status }: { status: TournamentStatus }) => {
   }
 
   return (
-    <div className="rounded-full border border-white/8 bg-white/[0.03] px-3 py-1.5">
+    <div className="rounded-full border border-white/8 bg-white/[0.03] px-3 py-1.5 text-center">
       <span className="text-[11px] font-semibold text-gray-400">Finished</span>
       {status.winner && (
         <div className="mt-0.5 flex items-center justify-end gap-1.5">
