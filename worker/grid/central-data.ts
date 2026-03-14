@@ -26,7 +26,7 @@ interface GridTournamentEdge {
 interface GridTournamentsResponse {
   tournaments: {
     edges: GridTournamentEdge[];
-    pageInfo: { hasNextPage: boolean; endCursor: string | null };
+    pageInfo: { hasPreviousPage: boolean; startCursor: string | null };
   };
 }
 
@@ -55,22 +55,26 @@ interface GridAllSeriesResponse {
 
 export const fetchTournaments = async (): Promise<FetchedTournament[]> => {
   const tournaments: FetchedTournament[] = [];
-  let after: string | null = null;
-  let hasNextPage = true;
+  let before: string | null = null;
+  let hasPreviousPage = true;
 
-  while (hasNextPage) {
+  while (hasPreviousPage) {
     await waitForToken(centralBucket);
 
     const variables = {
-      first: config.pagination.pageSize,
-      after,
+      last: config.pagination.pageSize,
+      before,
     };
     const data: GridTournamentsResponse = await centralClient.request(
       tournamentsQuery,
       variables,
     );
 
-    for (const edge of data.tournaments.edges) {
+    // last/before returns edges in ascending order within each page,
+    // so we reverse to keep most-recent-first ordering
+    const edges = [...data.tournaments.edges].reverse();
+
+    for (const edge of edges) {
       const n = edge.node;
       tournaments.push({
         id: n.id,
@@ -85,8 +89,8 @@ export const fetchTournaments = async (): Promise<FetchedTournament[]> => {
       });
     }
 
-    hasNextPage = data.tournaments.pageInfo.hasNextPage;
-    after = data.tournaments.pageInfo.endCursor;
+    hasPreviousPage = data.tournaments.pageInfo.hasPreviousPage;
+    before = data.tournaments.pageInfo.startCursor;
   }
 
   return tournaments;

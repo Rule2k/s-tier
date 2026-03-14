@@ -2,8 +2,8 @@
 
 /** CS2 title ID hardcoded — Grid IdFilter only accepts { in: [...] }. */
 export const tournamentsQuery = `
-  query Tournaments($first: Int!, $after: String) {
-    tournaments(first: $first, after: $after, filter: { title: { id: { in: [28] } } }) {
+  query Tournaments($last: Int!, $before: String) {
+    tournaments(last: $last, before: $before, filter: { title: { id: { in: [28] } } }) {
       edges {
         node {
           id
@@ -19,8 +19,8 @@ export const tournamentsQuery = `
         cursor
       }
       pageInfo {
-        hasNextPage
-        endCursor
+        hasPreviousPage
+        startCursor
       }
     }
   }
