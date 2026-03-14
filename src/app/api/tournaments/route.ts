@@ -35,10 +35,10 @@ export const GET = async (request: Request) => {
     }
 
     const total = await redis.zcard(REDIS_KEYS.tournaments);
-    const tournamentIds = await redis.zrangebyscore(
+    const tournamentIds = await redis.zrevrangebyscore(
       REDIS_KEYS.tournaments,
-      "-inf",
       "+inf",
+      "-inf",
       "LIMIT",
       offset,
       limit,

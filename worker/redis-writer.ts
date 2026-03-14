@@ -16,7 +16,7 @@ export const writeTournaments = async (
   pipeline.del(REDIS_KEYS.tournaments);
 
   for (const t of tournaments) {
-    const score = t.startDate ? new Date(t.startDate).getTime() : 0;
+    const score = Number(t.id);
     pipeline.zadd(REDIS_KEYS.tournaments, score, t.id);
 
     pipeline.set(
