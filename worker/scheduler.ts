@@ -15,6 +15,7 @@ export const classifyTier = (
   state: GridSeriesState | null,
   scheduledAt: string,
   now = Date.now(),
+  lastFetchedAt = 0,
 ): PriorityTier => {
   // If we have state, use it for started/finished detection
   if (state?.finished) return "SKIP";
@@ -25,7 +26,9 @@ export const classifyTier = (
   const timeUntil = scheduledTime - now;
 
   if (timeUntil < 0) {
-    // Scheduled in the past but no state yet → likely live or about to be
+    // Already fetched once but API returned no state → series is gone, skip it
+    if (lastFetchedAt > 0) return "SKIP";
+    // Never fetched — try once as P0
     return "P0";
   }
 
@@ -106,6 +109,7 @@ export const getEligibleSeries = (now = Date.now()): EligibleSeries[] => {
       entry.state,
       entry.gridSeries.startTimeScheduled,
       now,
+      entry.lastFetchedAt,
     );
 
     if (tier === "SKIP") continue;
@@ -144,6 +148,7 @@ export const getTierCounts = (now = Date.now()): TierCounts => {
       entry.state,
       entry.gridSeries.startTimeScheduled,
       now,
+      entry.lastFetchedAt,
     );
     counts[tier]++;
   }
