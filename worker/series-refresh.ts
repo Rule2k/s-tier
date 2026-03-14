@@ -105,16 +105,12 @@ const runRefreshCycle = async (): Promise<void> => {
     // Heartbeat
     await writeHeartbeat();
 
-    // Log (only if there was something to do)
-    const totalEligible = Object.values(eligible).reduce((a, b) => a + b, 0);
-    if (totalEligible > 0) {
-      logFastCycle({
-        cycleNumber,
-        durationMs: Date.now() - start,
-        fetched: fetched as { P0: number; P1: number; P2: number; P3: number },
-        eligible: eligible as { P0: number; P1: number; P2: number; P3: number },
-      });
-    }
+    logFastCycle({
+      cycleNumber,
+      durationMs: Date.now() - start,
+      fetched: fetched as { P0: number; P1: number; P2: number; P3: number },
+      eligible: eligible as { P0: number; P1: number; P2: number; P3: number },
+    });
   } catch (error) {
     logError(`Series refresh cycle #${cycleNumber} failed`, error);
   }

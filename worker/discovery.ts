@@ -1,7 +1,7 @@
 import { discoverTournaments, fetchTournamentSeries } from "./grid/central-data";
 import { writeTournaments, writeTournamentSeries, writeDiscoveryTimestamp } from "./redis-writer";
 import { upsertSeries, getSeriesForTournament } from "./scheduler";
-import { logSlowCycle, logError } from "./logger";
+import { logError } from "./logger";
 import { drainBucket, centralBucket } from "./rate-limiter";
 import { config } from "./config";
 import redis from "../src/lib/redis/client";
@@ -83,11 +83,8 @@ const runDiscoveryCycle = async (): Promise<void> => {
 
     await writeDiscoveryTimestamp();
 
-    logSlowCycle({
-      tournamentIds: tracked.map((t) => t.id),
-      entries: [], // Simplified — the log will show tournament count
-      durationMs: Date.now() - start,
-    });
+    const duration = ((Date.now() - start) / 1000).toFixed(1);
+    console.log(`[discovery] Done in ${duration}s — ${fullyDiscoveredTournaments.size}/${tracked.length} tournaments covered, ${allSeries.length} new series registered`);
   } catch (error) {
     logError("Discovery cycle failed", error);
 
