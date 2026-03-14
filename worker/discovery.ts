@@ -4,6 +4,8 @@ import { upsertSeries } from "./scheduler";
 import { logSlowCycle, logError } from "./logger";
 import { drainBucket, centralBucket } from "./rate-limiter";
 import { config } from "./config";
+import redis from "../src/lib/redis/client";
+import { REDIS_KEYS } from "../src/shared/redis-keys";
 import type { FetchedSeries } from "./types/grid";
 
 // --- State ---
@@ -103,6 +105,68 @@ const isRateLimitError = (error: unknown): boolean => {
   return false;
 };
 
+// --- Hydrate scheduler from Redis on startup ---
+
+const hydrateSchedulerFromRedis = async (): Promise<void> => {
+  try {
+    const tournamentIds = await redis.zrevrangebyscore(
+      REDIS_KEYS.tournaments, "+inf", "-inf", "LIMIT", 0, 200,
+    );
+
+    if (tournamentIds.length === 0) return;
+
+    let totalSeries = 0;
+
+    for (const tournamentId of tournamentIds) {
+      const [tournamentJson, seriesIds] = await Promise.all([
+        redis.get(REDIS_KEYS.tournament(tournamentId)),
+        redis.zrangebyscore(REDIS_KEYS.tournamentSeries(tournamentId), "-inf", "+inf"),
+      ]);
+
+      if (!tournamentJson || seriesIds.length === 0) continue;
+
+      const tournament = JSON.parse(tournamentJson);
+
+      // Batch-read all series data
+      const pipeline = redis.pipeline();
+      for (const id of seriesIds) {
+        pipeline.get(REDIS_KEYS.series(id));
+      }
+      const results = await pipeline.exec();
+      if (!results) continue;
+
+      for (let i = 0; i < seriesIds.length; i++) {
+        const seriesJson = results[i]?.[1] as string | null;
+        if (!seriesJson) continue;
+
+        const s = JSON.parse(seriesJson);
+        upsertSeries(tournamentId, {
+          id: s.id,
+          startTimeScheduled: s.startTimeScheduled,
+          format: { nameShortened: s.format ?? "Bo1" },
+          tournament: {
+            id: tournamentId,
+            name: tournament.name,
+            nameShortened: tournament.nameShortened ?? tournament.name,
+            logoUrl: tournament.logoUrl ?? "",
+          },
+          teams: (s.teams ?? []).map((t: { id: string; name: string; logoUrl?: string }) => ({
+            baseInfo: { id: t.id, name: t.name, logoUrl: t.logoUrl ?? "" },
+          })),
+        });
+        totalSeries++;
+      }
+
+      trackedTournamentIds.add(tournamentId);
+      fullyDiscoveredTournaments.add(tournamentId);
+    }
+
+    console.log(`[discovery] Hydrated ${totalSeries} series from ${tournamentIds.length} tournaments in Redis`);
+  } catch (error) {
+    logError("Failed to hydrate scheduler from Redis", error);
+  }
+};
+
 // --- Public ---
 
 const scheduleNextDiscovery = () => {
@@ -113,7 +177,10 @@ const scheduleNextDiscovery = () => {
 };
 
 export const startDiscoveryLoop = async (): Promise<void> => {
-  // Initial run
+  // Hydrate scheduler with existing Redis data (no API calls needed)
+  await hydrateSchedulerFromRedis();
+
+  // Initial discovery run
   await runDiscoveryCycle();
 
   // Then repeat — setTimeout ensures next cycle waits for previous to finish
