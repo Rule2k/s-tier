@@ -35,14 +35,19 @@ const runRefreshCycle = async (): Promise<void> => {
       eligible[tier]++;
     }
 
+    // Cap fetches per cycle to avoid draining the API budget in one long cycle
+    const MAX_FETCHES_PER_CYCLE = 50;
+    let fetchCount = 0;
+
     for (const { entry, tier } of series) {
-      // Rate limit: non-blocking — process only what's available now
+      if (fetchCount >= MAX_FETCHES_PER_CYCLE) break;
       if (!tryConsume(liveGlobalBucket) || !tryConsume(getLivePerSeriesBucket(entry.seriesId))) {
         break;
       }
 
       try {
         const state = await fetchSeriesState(entry.seriesId);
+        fetchCount++;
 
         if (state) {
           // Update scheduler registry
