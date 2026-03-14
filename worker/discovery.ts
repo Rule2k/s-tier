@@ -1,6 +1,6 @@
 import { discoverTournaments, fetchTournamentSeries } from "./grid/central-data";
 import { writeTournaments, writeTournamentSeries, writeDiscoveryTimestamp } from "./redis-writer";
-import { upsertSeries } from "./scheduler";
+import { upsertSeries, getSeriesForTournament } from "./scheduler";
 import { logSlowCycle, logError } from "./logger";
 import { drainBucket, centralBucket } from "./rate-limiter";
 import { config } from "./config";
@@ -40,6 +40,11 @@ const runDiscoveryCycle = async (): Promise<void> => {
 
     for (const tournament of tracked) {
       if (fullyDiscoveredTournaments.has(tournament.id)) continue;
+      // Skip if already in scheduler registry (e.g. hydrated from Redis)
+      if (getSeriesForTournament(tournament.id).length > 0) {
+        fullyDiscoveredTournaments.add(tournament.id);
+        continue;
+      }
 
       try {
         const series = await fetchTournamentSeries(tournament.id);
