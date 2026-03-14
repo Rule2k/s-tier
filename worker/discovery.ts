@@ -12,6 +12,9 @@ import type { FetchedSeries } from "./types/grid";
 /** Set of prestigious tournament IDs discovered so far. */
 const prestigiousTournamentIds = new Set<string>();
 
+/** Tournaments whose series have already been fetched successfully. */
+const fullyDiscoveredTournaments = new Set<string>();
+
 // --- Discovery cycle ---
 
 const runDiscoveryCycle = async (): Promise<void> => {
@@ -36,13 +39,14 @@ const runDiscoveryCycle = async (): Promise<void> => {
     const allSeries: FetchedSeries[] = [];
 
     for (const tournament of prestigious) {
+      if (fullyDiscoveredTournaments.has(tournament.id)) continue;
+
       try {
         const series = await fetchTournamentSeries(tournament.id);
         allSeries.push(...series);
 
         // Register each series in the scheduler
         for (const s of series) {
-          // Adapt FetchedSeries to the GridSeries shape expected by scheduler
           upsertSeries(tournament.id, {
             id: s.id,
             startTimeScheduled: s.startTimeScheduled,
@@ -61,6 +65,7 @@ const runDiscoveryCycle = async (): Promise<void> => {
 
         // Write series for this tournament to Redis
         await writeTournamentSeries(tournament.id, series);
+        fullyDiscoveredTournaments.add(tournament.id);
       } catch (error) {
         logError(`Failed to fetch series for tournament ${tournament.id}`, error);
 
