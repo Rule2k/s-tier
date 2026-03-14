@@ -25,9 +25,13 @@ export const GET = async (request: Request) => {
           { status: 404 },
         );
       }
-      return NextResponse.json({ tournaments: [tournament], hasMore: false, total: 1 }, {
-        headers: cacheHeaders(),
-      });
+      
+      return NextResponse.json(
+        { tournaments: [tournament], hasMore: false, total: 1 },
+        {
+          headers: cacheHeaders(),
+        },
+      );
     }
 
     const total = await redis.zcard(REDIS_KEYS.tournaments);
@@ -143,32 +147,35 @@ const deriveStatus = (state: SeriesStateData | null): MatchStatus => {
   return "not_started";
 };
 
-const mapSeriesToMatch = (series: SeriesData, state: SeriesStateData | null): Match => {
+const mapSeriesToMatch = (
+  series: SeriesData,
+  state: SeriesStateData | null,
+): Match => {
   const status = deriveStatus(state);
 
-  const teams: MatchTeam[] = (series.teams ?? []).map((team: { id: string; name: string }, index: number) => {
-    const stateTeam = state?.teams?.[index];
-    return {
-      name: team.name,
-      shortName: team.name,
-      logoUrl: null,
-      score: stateTeam?.score ?? null,
-      isWinner: stateTeam?.won ?? false,
-    };
-  });
+  const teams: MatchTeam[] = (series.teams ?? []).map(
+    (team: { id: string; name: string }, index: number) => {
+      const stateTeam = state?.teams?.[index];
+      return {
+        name: team.name,
+        shortName: team.name,
+        logoUrl: null,
+        score: stateTeam?.score ?? null,
+        isWinner: stateTeam?.won ?? false,
+      };
+    },
+  );
 
   const maps: MapScore[] = (state?.games ?? []).map((game: GameData) => ({
     mapNumber: game.sequenceNumber,
     mapName: game.mapName ?? "tba",
-    status: game.finished ? "finished" as const : game.started ? "running" as const : "not_started" as const,
-    scores: [
-      game.teams?.[0]?.score ?? 0,
-      game.teams?.[1]?.score ?? 0,
-    ] as [number, number],
-    sides: [
-      game.teams?.[0]?.side ?? "",
-      game.teams?.[1]?.side ?? "",
-    ] as [string, string],
+    status: game.finished
+      ? "finished"
+      : game.started
+        ? "running"
+        : "not_started",
+    scores: [game.teams?.[0]?.score ?? 0, game.teams?.[1]?.score ?? 0],
+    sides: [game.teams?.[0]?.side ?? "", game.teams?.[1]?.side ?? ""],
   }));
 
   return {
