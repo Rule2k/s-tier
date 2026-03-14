@@ -1,4 +1,4 @@
-import { fetchTournaments, fetchTournamentSeries } from "./grid/central-data";
+import { discoverTournaments, fetchTournamentSeries } from "./grid/central-data";
 import { writeTournaments, writeTournamentSeries, writeDiscoveryTimestamp } from "./redis-writer";
 import { upsertSeries } from "./scheduler";
 import { logSlowCycle, logError } from "./logger";
@@ -20,24 +20,20 @@ const runDiscoveryCycle = async (): Promise<void> => {
   const start = Date.now();
 
   try {
-    // 1. Fetch all CS2 tournaments (paginated)
-    const allTournaments = await fetchTournaments();
+    // 1. Discover tournaments via series of tracked teams (server-side filter)
+    const tracked = await discoverTournaments(config.teamFilter.teamIds);
 
-    // 2. Filter by configured teams
-    const teamNames: readonly string[] = config.teamFilter.teamNames;
-    const tracked = allTournaments.filter((t) =>
-      t.teams.some((team) => teamNames.includes(team.name)),
-    );
+    console.log(`[discovery] ${tracked.length} tournaments discovered via team series`);
 
     // Track discovered IDs
     for (const t of tracked) {
       trackedTournamentIds.add(t.id);
     }
 
-    // 3. Write tournament index to Redis
+    // 2. Write tournament index to Redis
     await writeTournaments(tracked);
 
-    // 4. For each tracked tournament, fetch its series
+    // 3. For each tracked tournament, fetch its series
     const allSeries: FetchedSeries[] = [];
 
     for (const tournament of tracked) {

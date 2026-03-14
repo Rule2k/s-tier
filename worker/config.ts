@@ -20,7 +20,17 @@ export const config = {
 
   /** Team filter — only track tournaments these teams participate in */
   teamFilter: {
-    teamNames: ["Vitality"],
+    teamIds: [
+      "51818", // Team Vitality
+      "51824", // FURIA
+      "51819", // MOUZ
+      "51967", // Team Falcons
+      "49586", // Team Spirit
+      "51814", // Natus Vincere
+      "51822", // G2 Esports
+      "51812", // FaZe Clan
+      "51793", // 3DMAX
+    ],
   },
 
   /** Grid API pagination */

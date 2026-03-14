@@ -1,32 +1,34 @@
 import { centralClient } from "./client";
-import { tournamentsQuery, allSeriesQuery } from "./queries";
+import { discoverSeriesQuery, allSeriesQuery } from "./queries";
 import { config } from "../config";
 import { waitForToken, centralBucket } from "../rate-limiter";
 import type { FetchedTournament, FetchedSeries } from "../types/grid";
 
 // --- Grid response types (Central Data specific) ---
 
-interface GridTournamentNode {
+interface DiscoverSeriesNode {
   id: string;
-  name: string;
-  nameShortened: string;
-  logoUrl: string | null;
-  startDate: string | null;
-  endDate: string | null;
-  prizePool: { amount: number } | null;
-  venueType: string | null;
-  teams: { id: string; name: string }[];
+  startTimeScheduled: string;
+  tournament: {
+    id: string;
+    name: string;
+    nameShortened: string;
+    logoUrl: string | null;
+    prizePool: { amount: number } | null;
+    venueType: string | null;
+  };
+  teams: { baseInfo: { id: string; name: string } }[];
 }
 
-interface GridTournamentEdge {
-  node: GridTournamentNode;
+interface DiscoverSeriesEdge {
+  node: DiscoverSeriesNode;
   cursor: string;
 }
 
-interface GridTournamentsResponse {
-  tournaments: {
-    edges: GridTournamentEdge[];
-    pageInfo: { hasPreviousPage: boolean; startCursor: string | null };
+interface DiscoverSeriesResponse {
+  allSeries: {
+    edges: DiscoverSeriesEdge[];
+    pageInfo: { hasNextPage: boolean; endCursor: string | null };
   };
 }
 
@@ -51,46 +53,69 @@ interface GridAllSeriesResponse {
   };
 }
 
-// --- Fetch tournaments (paginated) ---
+// --- Discover tournaments via team series (paginated) ---
 
-export const fetchTournaments = async (): Promise<FetchedTournament[]> => {
-  const tournaments: FetchedTournament[] = [];
-  let before: string | null = null;
-  let hasPreviousPage = true;
+export const discoverTournaments = async (
+  teamIds: readonly string[],
+): Promise<FetchedTournament[]> => {
+  // Accumulate series grouped by tournament
+  const tournamentMap = new Map<
+    string,
+    { meta: DiscoverSeriesNode["tournament"]; dates: string[]; teams: Map<string, string> }
+  >();
 
-  while (hasPreviousPage) {
+  let after: string | null = null;
+  let hasNextPage = true;
+
+  while (hasNextPage) {
     await waitForToken(centralBucket);
 
     const variables = {
-      last: config.pagination.pageSize,
-      before,
+      first: config.pagination.pageSize,
+      after,
+      teamIds: [...teamIds],
     };
-    const data: GridTournamentsResponse = await centralClient.request(
-      tournamentsQuery,
+    const data: DiscoverSeriesResponse = await centralClient.request(
+      discoverSeriesQuery,
       variables,
     );
 
-    // last/before returns edges in ascending order within each page,
-    // so we reverse to keep most-recent-first ordering
-    const edges = [...data.tournaments.edges].reverse();
+    for (const edge of data.allSeries.edges) {
+      const { tournament, startTimeScheduled, teams } = edge.node;
 
-    for (const edge of edges) {
-      const n = edge.node;
-      tournaments.push({
-        id: n.id,
-        name: n.name,
-        nameShortened: n.nameShortened,
-        logoUrl: n.logoUrl,
-        startDate: n.startDate,
-        endDate: n.endDate,
-        prizePool: n.prizePool?.amount ?? null,
-        venueType: n.venueType,
-        teams: n.teams,
-      });
+      let entry = tournamentMap.get(tournament.id);
+      if (!entry) {
+        entry = { meta: tournament, dates: [], teams: new Map() };
+        tournamentMap.set(tournament.id, entry);
+      }
+
+      if (startTimeScheduled) entry.dates.push(startTimeScheduled);
+
+      for (const t of teams) {
+        entry.teams.set(t.baseInfo.id, t.baseInfo.name);
+      }
     }
 
-    hasPreviousPage = data.tournaments.pageInfo.hasPreviousPage;
-    before = data.tournaments.pageInfo.startCursor;
+    hasNextPage = data.allSeries.pageInfo.hasNextPage;
+    after = data.allSeries.pageInfo.endCursor;
+  }
+
+  // Convert map to FetchedTournament[]
+  const tournaments: FetchedTournament[] = [];
+
+  for (const [id, { meta, dates, teams }] of tournamentMap) {
+    const sorted = dates.sort();
+    tournaments.push({
+      id,
+      name: meta.name,
+      nameShortened: meta.nameShortened,
+      logoUrl: meta.logoUrl,
+      startDate: sorted[0] ?? null,
+      endDate: sorted[sorted.length - 1] ?? null,
+      prizePool: meta.prizePool?.amount ?? null,
+      venueType: meta.venueType,
+      teams: [...teams.entries()].map(([tid, name]) => ({ id: tid, name })),
+    });
   }
 
   return tournaments;

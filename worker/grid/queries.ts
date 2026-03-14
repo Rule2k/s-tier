@@ -1,26 +1,30 @@
 /** All Grid GraphQL queries in one file. */
 
-/** CS2 title ID hardcoded — Grid IdFilter only accepts { in: [...] }. */
-export const tournamentsQuery = `
-  query Tournaments($last: Int!, $before: String) {
-    tournaments(last: $last, before: $before, filter: { title: { id: { in: [28] } } }) {
+/**
+ * Discover tournaments through series of tracked teams.
+ * Returns series with embedded tournament metadata — caller groups by tournament.
+ */
+export const discoverSeriesQuery = `
+  query DiscoverSeries($first: Int!, $after: String, $teamIds: [ID!]!) {
+    allSeries(
+      first: $first
+      after: $after
+      filter: { titleId: 28, teamIds: { in: $teamIds } }
+      orderBy: StartTimeScheduled
+      orderDirection: DESC
+    ) {
       edges {
         node {
           id
-          name
-          nameShortened
-          logoUrl
-          startDate
-          endDate
-          prizePool { amount }
-          venueType
-          teams { id name }
+          startTimeScheduled
+          tournament { id name nameShortened logoUrl prizePool { amount } venueType }
+          teams { baseInfo { id name } }
         }
         cursor
       }
       pageInfo {
-        hasPreviousPage
-        startCursor
+        hasNextPage
+        endCursor
       }
     }
   }
