@@ -60,7 +60,7 @@ export const seriesStateQuery = `
   query SeriesState($id: ID!) {
     seriesState(id: $id) {
       id
-      format { nameShortened }
+      format
       started
       finished
       forfeited

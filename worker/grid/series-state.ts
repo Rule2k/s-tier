@@ -36,7 +36,7 @@ interface GridDraftAction {
 
 interface GridSeriesState {
   id: string;
-  format: { nameShortened: string };
+  format: string;
   started: boolean;
   finished: boolean;
   forfeited: boolean;
@@ -68,7 +68,7 @@ export const fetchSeriesState = async (
 
   return {
     seriesId: s.id,
-    format: s.format.nameShortened,
+    format: s.format,
     started: s.started,
     finished: s.finished,
     teams: s.teams.map((t) => ({
