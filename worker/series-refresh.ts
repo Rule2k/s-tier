@@ -36,6 +36,9 @@ const runRefreshCycle = async (): Promise<void> => {
       eligible[tier]++;
     }
 
+    const totalEligible = Object.values(eligible).reduce((a, b) => a + b, 0);
+    console.log(`[refresh] Cycle #${cycleNumber} starting — ${totalEligible} eligible (P0: ${eligible.P0}, P1: ${eligible.P1}, P2: ${eligible.P2}, P3: ${eligible.P3})`);
+
     for (const { entry, tier } of series) {
       // Non-blocking: process only what the rate limit allows right now
       if (!tryConsume(liveGlobalBucket) || !tryConsume(getLivePerSeriesBucket(entry.seriesId))) {
