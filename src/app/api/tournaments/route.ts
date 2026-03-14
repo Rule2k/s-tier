@@ -140,8 +140,11 @@ const buildTournamentPayload = async (tournamentId: string) => {
 
 // --- Series → Match mapping ---
 
-const deriveStatus = (state: SeriesStateData | null): MatchStatus => {
-  if (!state) return "not_started";
+const deriveStatus = (state: SeriesStateData | null, scheduledAt?: string): MatchStatus => {
+  if (!state) {
+    if (scheduledAt && new Date(scheduledAt).getTime() < Date.now()) return "finished";
+    return "not_started";
+  }
   if (state.finished) return "finished";
   if (state.started) return "running";
   return "not_started";
@@ -151,7 +154,7 @@ const mapSeriesToMatch = (
   series: SeriesData,
   state: SeriesStateData | null,
 ): Match => {
-  const status = deriveStatus(state);
+  const status = deriveStatus(state, series.startTimeScheduled);
 
   const teams: MatchTeam[] = (series.teams ?? []).map(
     (team: { id: string; name: string; logoUrl?: string | null }, index: number) => {
