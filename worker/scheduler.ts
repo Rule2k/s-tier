@@ -28,8 +28,8 @@ export const classifyTier = (
   if (timeUntil < 0) {
     // API confirmed no state exists → no point retrying
     if (noStateConfirmed) return "SKIP";
-    // Not confirmed yet — try as P0
-    return "P0";
+    // Past series without state — low priority backfill, not urgent
+    return "P3";
   }
 
   if (timeUntil <= THIRTY_MINUTES_MS) return "P1";

@@ -62,8 +62,8 @@ describe("scheduler", () => {
       expect(classifyTier(state, "2026-03-12T11:00:00Z", now)).toBe("P0");
     });
 
-    it("returns P0 for scheduled in the past with no state", () => {
-      expect(classifyTier(null, "2026-03-12T11:00:00Z", now)).toBe("P0");
+    it("returns P3 for scheduled in the past with no state (backfill)", () => {
+      expect(classifyTier(null, "2026-03-12T11:00:00Z", now)).toBe("P3");
     });
 
     it("returns P1 for upcoming within 30 min", () => {
@@ -135,13 +135,13 @@ describe("scheduler", () => {
   describe("getEligibleSeries", () => {
     const now = new Date("2026-03-12T12:00:00Z").getTime();
 
-    it("returns never-fetched series as eligible", () => {
-      const gs = makeGridSeries("s1", "2026-03-12T11:50:00Z"); // 10min ago = P0
+    it("returns never-fetched past series as P3 backfill", () => {
+      const gs = makeGridSeries("s1", "2026-03-12T11:50:00Z"); // 10min ago = P3 backfill
       upsertSeries("t1", gs);
 
       const eligible = getEligibleSeries(now);
       expect(eligible).toHaveLength(1);
-      expect(eligible[0].tier).toBe("P0");
+      expect(eligible[0].tier).toBe("P3");
     });
 
     it("does not return recently-fetched series", () => {
