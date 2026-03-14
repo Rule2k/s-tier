@@ -13,6 +13,8 @@ export interface SeriesEntry {
   state: GridSeriesState | null;
   lastFetchedAt: number;
   failCount: number;
+  /** API successfully returned null — no state data exists for this series. */
+  noStateConfirmed: boolean;
 }
 
 // --- Eligibility ---

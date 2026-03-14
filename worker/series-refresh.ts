@@ -79,6 +79,11 @@ const runRefreshCycle = async (): Promise<void> => {
           await writeSeriesMeta(entry.seriesId, status);
         } else {
           entry.lastFetchedAt = Date.now();
+          // API returned null — if the series is in the past, it won't ever have state
+          const scheduled = new Date(entry.gridSeries.startTimeScheduled).getTime();
+          if (scheduled < Date.now()) {
+            entry.noStateConfirmed = true;
+          }
         }
       } catch (error) {
         entry.failCount++;
