@@ -72,12 +72,12 @@ const runDiscoveryCycle = async (): Promise<void> => {
         await writeTournamentSeries(tournament.id, series);
         fullyDiscoveredTournaments.add(tournament.id);
       } catch (error) {
-        logError(`Failed to fetch series for tournament ${tournament.id}`, error);
-
         if (isRateLimitError(error)) {
+          console.log(`[discovery] Rate limited — pausing series fetch (${fullyDiscoveredTournaments.size}/${tracked.length} tournaments covered)`);
           drainBucket(centralBucket);
           break;
         }
+        logError(`Failed to fetch series for tournament ${tournament.id}`, error);
       }
     }
 
