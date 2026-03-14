@@ -54,8 +54,4 @@ export interface FetchedSeriesState {
     finished: boolean;
     teams: { id: string; name: string; side: string; score: number; won: boolean }[];
   }[];
-  draftActions: { id: string; type: string }[];
-  updatedAt: string;
-  startedAt: string | null;
-  duration: string;
 }

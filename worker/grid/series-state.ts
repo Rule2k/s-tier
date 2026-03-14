@@ -25,13 +25,7 @@ interface GridGame {
   map: { name: string };
   started: boolean;
   finished: boolean;
-  paused: boolean;
   teams: GridGameTeam[];
-}
-
-interface GridDraftAction {
-  id: string;
-  type: string;
 }
 
 interface GridSeriesState {
@@ -41,10 +35,6 @@ interface GridSeriesState {
   finished: boolean;
   teams: GridSeriesStateTeam[];
   games: GridGame[];
-  draftActions: GridDraftAction[];
-  updatedAt: string;
-  startedAt: string | null;
-  duration: string;
 }
 
 interface GridSeriesStateResponse {
@@ -89,12 +79,5 @@ export const fetchSeriesState = async (
         won: t.won,
       })),
     })),
-    draftActions: s.draftActions.map((d) => ({
-      id: d.id,
-      type: d.type,
-    })),
-    updatedAt: s.updatedAt,
-    startedAt: s.startedAt,
-    duration: s.duration,
   };
 };

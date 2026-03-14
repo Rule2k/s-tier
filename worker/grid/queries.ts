@@ -79,7 +79,6 @@ export const seriesStateQuery = `
         map { name }
         started
         finished
-        paused
         teams {
           id
           name
@@ -88,13 +87,6 @@ export const seriesStateQuery = `
           won
         }
       }
-      draftActions {
-        id
-        type
-      }
-      updatedAt
-      startedAt
-      duration
     }
   }
 `;
