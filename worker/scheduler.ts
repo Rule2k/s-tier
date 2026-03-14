@@ -128,12 +128,21 @@ export const getEligibleSeries = (now = Date.now()): EligibleSeries[] => {
     }
   }
 
-  // Sort: P0 first, then P1, P2, P3. Within same tier, most stale first.
+  // Sort: P0 first, then P1, P2, P3.
+  // Within same tier: most stale first, then most recent scheduled first (tie-breaker).
   const tierOrder: Record<string, number> = { P0: 0, P1: 1, P2: 2, P3: 3 };
   eligible.sort((a, b) => {
     const tierDiff = tierOrder[a.tier] - tierOrder[b.tier];
     if (tierDiff !== 0) return tierDiff;
-    return b.staleness - a.staleness; // most stale first
+
+    // If staleness differs significantly (>1s), prioritize most stale
+    const stalenessDiff = b.staleness - a.staleness;
+    if (Math.abs(stalenessDiff) > 1000) return stalenessDiff;
+
+    // Equal staleness (e.g. all hydrated at 0): prioritize most recent series first
+    const aTime = new Date(a.entry.gridSeries.startTimeScheduled).getTime();
+    const bTime = new Date(b.entry.gridSeries.startTimeScheduled).getTime();
+    return bTime - aTime;
   });
 
   return eligible;
