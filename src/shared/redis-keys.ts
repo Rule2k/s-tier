@@ -34,8 +34,8 @@ export const REDIS_KEYS = {
 export const REDIS_TTL = {
   TOURNAMENTS: 86_400,              // 24h
   TOURNAMENT: 86_400,               // 24h
-  TOURNAMENT_SERIES: 21_600,        // 6h
-  SERIES_LIVE: 21_600,              // 6h
+  TOURNAMENT_SERIES: 604_800,       // 7 days (matches SERIES_STATE_FINISHED)
+  SERIES_LIVE: 604_800,             // 7 days (matches SERIES_STATE_FINISHED)
   SERIES_FINISHED: 604_800,         // 7 days
   SERIES_STATE_LIVE: 21_600,        // 6h
   SERIES_STATE_FINISHED: 604_800,   // 7 days
