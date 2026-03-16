@@ -1,6 +1,6 @@
 import { discoverTournaments, fetchTournamentSeries } from "./grid/central-data";
 import { writeTournaments, writeTournamentSeries, writeDiscoveryTimestamp } from "./redis-writer";
-import { upsertSeries, getSeriesForTournament, getRegistry } from "./scheduler";
+import { upsertSeries, getRegistry } from "./scheduler";
 import { logError } from "./logger";
 import { drainBucket, centralBucket } from "./rate-limiter";
 import { config } from "./config";
@@ -39,11 +39,12 @@ const runDiscoveryCycle = async (): Promise<void> => {
     const allSeries: FetchedSeries[] = [];
 
     for (const tournament of tracked) {
-      if (fullyDiscoveredTournaments.has(tournament.id)) continue;
-      // Skip if already in scheduler registry (e.g. hydrated from Redis)
-      if (getSeriesForTournament(tournament.id).length > 0) {
-        fullyDiscoveredTournaments.add(tournament.id);
-        continue;
+      // Skip only if series data actually exists in Redis (not just in-memory)
+      if (fullyDiscoveredTournaments.has(tournament.id)) {
+        const seriesCount = await redis.zcard(REDIS_KEYS.tournamentSeries(tournament.id));
+        if (seriesCount > 0) continue;
+        // Redis data expired — need to re-fetch
+        fullyDiscoveredTournaments.delete(tournament.id);
       }
 
       try {
