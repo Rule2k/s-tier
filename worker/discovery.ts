@@ -5,7 +5,7 @@ import { logError } from "./logger";
 import { drainBucket, centralBucket } from "./rate-limiter";
 import { config } from "./config";
 import redis from "../src/lib/redis/client";
-import { REDIS_KEYS } from "../src/shared/redis-keys";
+import { REDIS_KEYS, REDIS_TTL } from "../src/shared/redis-keys";
 import type { FetchedSeries } from "./types/grid";
 
 // --- State ---
@@ -129,14 +129,23 @@ const hydrateSchedulerFromRedis = async (): Promise<void> => {
 
       const tournament = JSON.parse(tournamentJson);
 
-      // Batch-read all series data + states
-      const pipeline = redis.pipeline();
+      // Batch-read all series data + states, and refresh TTLs
+      const readPipeline = redis.pipeline();
       for (const id of seriesIds) {
-        pipeline.get(REDIS_KEYS.series(id));
-        pipeline.get(REDIS_KEYS.seriesState(id));
+        readPipeline.get(REDIS_KEYS.series(id));
+        readPipeline.get(REDIS_KEYS.seriesState(id));
       }
-      const results = await pipeline.exec();
+      const results = await readPipeline.exec();
       if (!results) continue;
+
+      // Refresh TTLs to ensure they match current config
+      const ttlPipeline = redis.pipeline();
+      ttlPipeline.expire(REDIS_KEYS.tournament(tournamentId), REDIS_TTL.TOURNAMENT);
+      ttlPipeline.expire(REDIS_KEYS.tournamentSeries(tournamentId), REDIS_TTL.TOURNAMENT_SERIES);
+      for (const id of seriesIds) {
+        ttlPipeline.expire(REDIS_KEYS.series(id), REDIS_TTL.SERIES_LIVE);
+      }
+      await ttlPipeline.exec();
 
       for (let i = 0; i < seriesIds.length; i++) {
         const seriesJson = results[i * 2]?.[1] as string | null;
