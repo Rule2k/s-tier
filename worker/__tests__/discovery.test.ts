@@ -32,14 +32,14 @@ const redisMock = vi.hoisted(() => ({
   pipeline: vi.fn(),
 }));
 
-vi.mock("./grid/central-data", () => centralDataMock);
-vi.mock("./redis-writer", () => redisWriterMock);
-vi.mock("./scheduler", () => schedulerMock);
-vi.mock("./rate-limiter", () => rateLimiterMock);
-vi.mock("../src/lib/redis/client", () => ({ default: redisMock }));
-vi.mock("./logger", () => ({ logError: vi.fn() }));
+vi.mock("../grid/central-data", () => centralDataMock);
+vi.mock("../redis-writer", () => redisWriterMock);
+vi.mock("../scheduler", () => schedulerMock);
+vi.mock("../rate-limiter", () => rateLimiterMock);
+vi.mock("../../src/lib/redis/client", () => ({ default: redisMock }));
+vi.mock("../logger", () => ({ logError: vi.fn() }));
 
-import { runDiscoveryCycle } from "./discovery";
+import { runDiscoveryCycle } from "../discovery";
 
 describe("discovery", () => {
   beforeEach(() => {

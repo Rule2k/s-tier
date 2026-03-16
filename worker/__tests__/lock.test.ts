@@ -5,11 +5,11 @@ const redisMock = vi.hoisted(() => ({
   eval: vi.fn(),
 }));
 
-vi.mock("../src/lib/redis/client", () => ({
+vi.mock("../../src/lib/redis/client", () => ({
   default: redisMock,
 }));
 
-vi.mock("./logger", () => ({
+vi.mock("../logger", () => ({
   logError: vi.fn(),
 }));
 
@@ -18,7 +18,7 @@ import {
   renewWorkerLock,
   releaseWorkerLock,
   startWorkerLockHeartbeat,
-} from "./lock";
+} from "../lock";
 
 describe("worker lock", () => {
   beforeEach(() => {

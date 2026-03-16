@@ -15,7 +15,7 @@ vi.mock("next/server", () => ({
   },
 }));
 
-import { GET } from "./route";
+import { GET } from "../route";
 
 describe("/api/health", () => {
   beforeEach(() => {

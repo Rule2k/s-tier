@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { REDIS_KEYS } from "../src/shared/redis-keys";
+import { REDIS_KEYS } from "../../src/shared/redis-keys";
 
 const redisMock = vi.hoisted(() => ({
   pipeline: vi.fn(),
@@ -7,11 +7,11 @@ const redisMock = vi.hoisted(() => ({
   set: vi.fn(),
 }));
 
-vi.mock("../src/lib/redis/client", () => ({
+vi.mock("../../src/lib/redis/client", () => ({
   default: redisMock,
 }));
 
-vi.mock("./logger", () => ({
+vi.mock("../logger", () => ({
   logError: vi.fn(),
 }));
 
@@ -19,7 +19,7 @@ import {
   deleteTournaments,
   writeTournaments,
   writeTournamentSeries,
-} from "./redis-writer";
+} from "../redis-writer";
 
 type PipelineResult = [Error | null, unknown];
 

@@ -23,13 +23,13 @@ const rateLimiterMock = vi.hoisted(() => ({
   getRemaining: vi.fn(),
 }));
 
-vi.mock("./grid/series-state", () => seriesStateMock);
-vi.mock("./redis-writer", () => redisWriterMock);
-vi.mock("./scheduler", () => schedulerMock);
-vi.mock("./rate-limiter", () => rateLimiterMock);
-vi.mock("./logger", () => ({ logError: vi.fn() }));
+vi.mock("../grid/series-state", () => seriesStateMock);
+vi.mock("../redis-writer", () => redisWriterMock);
+vi.mock("../scheduler", () => schedulerMock);
+vi.mock("../rate-limiter", () => rateLimiterMock);
+vi.mock("../logger", () => ({ logError: vi.fn() }));
 
-import { runRefreshCycle } from "./series-refresh";
+import { runRefreshCycle } from "../series-refresh";
 
 describe("series-refresh", () => {
   beforeEach(() => {
