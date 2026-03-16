@@ -6,12 +6,15 @@ vi.mock("next/image", () => ({
   default: ({
     alt,
     src,
-    unoptimized: _unoptimized,
+    unoptimized,
     ...props
   }: {
     alt: string;
     src: string;
     unoptimized?: boolean;
     [key: string]: unknown;
-  }) => createElement("img", { alt, src, ...props }),
+  }) => {
+    void unoptimized;
+    return createElement("img", { alt, src, ...props });
+  },
 }));

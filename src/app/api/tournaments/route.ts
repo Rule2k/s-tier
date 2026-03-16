@@ -145,7 +145,10 @@ const buildTournamentPayload = async (tournamentId: string) => {
 
 // --- Series → Match mapping ---
 
-const deriveStatus = (state: SeriesStateData | null, scheduledAt?: string): MatchStatus => {
+const deriveStatus = (
+  state: RedisSeriesState | null,
+  scheduledAt?: string,
+): MatchStatus => {
   if (!state) {
     if (scheduledAt && new Date(scheduledAt).getTime() < Date.now()) return "finished";
     return "not_started";

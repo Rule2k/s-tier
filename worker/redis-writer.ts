@@ -20,24 +20,28 @@ const execPipeline = async (
   pipeline: RedisPipeline,
   context: string,
 ) => {
-  let results;
+  let results: Awaited<ReturnType<RedisPipeline["exec"]>> = null;
   try {
     results = await pipeline.exec();
   } catch (error) {
     throwPipelineError(context, error);
   }
 
-  if (!results) {
+  if (results == null) {
     throwPipelineError(context, new Error("Redis pipeline returned null"));
   }
 
-  for (const [error] of results) {
+  const resolvedResults = results as NonNullable<
+    Awaited<ReturnType<RedisPipeline["exec"]>>
+  >;
+
+  for (const [error] of resolvedResults) {
     if (error) {
       throwPipelineError(context, error);
     }
   }
 
-  return results;
+  return resolvedResults;
 };
 
 const deleteSeriesArtifacts = (
