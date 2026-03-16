@@ -12,22 +12,14 @@ export const writeTournaments = async (
 
   const pipeline = redis.pipeline();
 
-  // Clear and rebuild the sorted set
+  // Clear and rebuild the sorted set (no TTL — rewritten every discovery cycle)
   pipeline.del(REDIS_KEYS.tournaments);
 
   for (const t of tournaments) {
     const score = Number(t.id);
     pipeline.zadd(REDIS_KEYS.tournaments, score, t.id);
-
-    pipeline.set(
-      REDIS_KEYS.tournament(t.id),
-      JSON.stringify(t),
-      "EX",
-      REDIS_TTL.TOURNAMENT,
-    );
+    pipeline.set(REDIS_KEYS.tournament(t.id), JSON.stringify(t));
   }
-
-  pipeline.expire(REDIS_KEYS.tournaments, REDIS_TTL.TOURNAMENTS);
 
   await pipeline.exec().catch((err) =>
     logError("Redis pipeline failed (writeTournaments)", err),
@@ -50,16 +42,9 @@ export const writeTournamentSeries = async (
   for (const s of seriesList) {
     const score = new Date(s.startTimeScheduled).getTime();
     pipeline.zadd(key, score, s.id);
-
-    pipeline.set(
-      REDIS_KEYS.series(s.id),
-      JSON.stringify(s),
-      "EX",
-      REDIS_TTL.SERIES_LIVE, // default to shorter TTL; will be extended for finished
-    );
+    // No TTL — static data, persists until overwritten
+    pipeline.set(REDIS_KEYS.series(s.id), JSON.stringify(s));
   }
-
-  pipeline.expire(key, REDIS_TTL.TOURNAMENT_SERIES);
 
   await pipeline.exec().catch((err) =>
     logError(`Redis pipeline failed (writeTournamentSeries ${tournamentId})`, err),
@@ -72,11 +57,17 @@ export const writeSeriesState = async (
   seriesId: string,
   state: FetchedSeriesState,
 ): Promise<void> => {
-  const ttl = state.finished ? REDIS_TTL.SERIES_STATE_FINISHED : REDIS_TTL.SERIES_STATE_LIVE;
-
-  await redis
-    .set(REDIS_KEYS.seriesState(seriesId), JSON.stringify(state), "EX", ttl)
-    .catch((err) => logError(`Redis write failed (seriesState ${seriesId})`, err));
+  if (state.finished) {
+    // Finished — static, no TTL
+    await redis
+      .set(REDIS_KEYS.seriesState(seriesId), JSON.stringify(state))
+      .catch((err) => logError(`Redis write failed (seriesState ${seriesId})`, err));
+  } else {
+    // Live/upcoming — 6h fallback in case worker dies
+    await redis
+      .set(REDIS_KEYS.seriesState(seriesId), JSON.stringify(state), "EX", REDIS_TTL.SERIES_STATE_LIVE)
+      .catch((err) => logError(`Redis write failed (seriesState ${seriesId})`, err));
+  }
 };
 
 // --- Series metadata ---

@@ -5,7 +5,7 @@ import { logError } from "./logger";
 import { drainBucket, centralBucket } from "./rate-limiter";
 import { config } from "./config";
 import redis from "../src/lib/redis/client";
-import { REDIS_KEYS, REDIS_TTL } from "../src/shared/redis-keys";
+import { REDIS_KEYS } from "../src/shared/redis-keys";
 import type { FetchedSeries } from "./types/grid";
 
 // --- State ---
@@ -130,23 +130,24 @@ const hydrateSchedulerFromRedis = async (): Promise<void> => {
 
       const tournament = JSON.parse(tournamentJson);
 
-      // Batch-read all series data + states, and refresh TTLs
-      const readPipeline = redis.pipeline();
+      // Batch-read all series data + states
+      const pipeline = redis.pipeline();
       for (const id of seriesIds) {
-        readPipeline.get(REDIS_KEYS.series(id));
-        readPipeline.get(REDIS_KEYS.seriesState(id));
+        pipeline.get(REDIS_KEYS.series(id));
+        pipeline.get(REDIS_KEYS.seriesState(id));
       }
-      const results = await readPipeline.exec();
+      const results = await pipeline.exec();
       if (!results) continue;
 
-      // Refresh TTLs to ensure they match current config
-      const ttlPipeline = redis.pipeline();
-      ttlPipeline.expire(REDIS_KEYS.tournament(tournamentId), REDIS_TTL.TOURNAMENT);
-      ttlPipeline.expire(REDIS_KEYS.tournamentSeries(tournamentId), REDIS_TTL.TOURNAMENT_SERIES);
+      // Remove TTLs from existing keys (migrate from old TTL-based approach)
+      const persistPipeline = redis.pipeline();
+      persistPipeline.persist(REDIS_KEYS.tournament(tournamentId));
+      persistPipeline.persist(REDIS_KEYS.tournamentSeries(tournamentId));
       for (const id of seriesIds) {
-        ttlPipeline.expire(REDIS_KEYS.series(id), REDIS_TTL.SERIES_LIVE);
+        persistPipeline.persist(REDIS_KEYS.series(id));
+        persistPipeline.persist(REDIS_KEYS.seriesState(id));
       }
-      await ttlPipeline.exec();
+      await persistPipeline.exec();
 
       for (let i = 0; i < seriesIds.length; i++) {
         const seriesJson = results[i * 2]?.[1] as string | null;

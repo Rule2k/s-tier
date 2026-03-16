@@ -30,15 +30,14 @@ export const REDIS_KEYS = {
   metaDiscoveryLastRun: `${PREFIX}:meta:discovery:lastRun`,
 } as const;
 
-/** TTLs in seconds. */
+/**
+ * TTLs in seconds.
+ * - Static data (tournaments, series, finished states): no TTL — persists until overwritten
+ * - Live states: 6h fallback in case worker dies
+ * - Meta: short-lived health indicators
+ */
 export const REDIS_TTL = {
-  TOURNAMENTS: 86_400,              // 24h
-  TOURNAMENT: 86_400,               // 24h
-  TOURNAMENT_SERIES: 604_800,       // 7 days (matches SERIES_STATE_FINISHED)
-  SERIES_LIVE: 604_800,             // 7 days (matches SERIES_STATE_FINISHED)
-  SERIES_FINISHED: 604_800,         // 7 days
-  SERIES_STATE_LIVE: 21_600,        // 6h
-  SERIES_STATE_FINISHED: 604_800,   // 7 days
+  SERIES_STATE_LIVE: 21_600,        // 6h — fallback if worker stops
   META: 3_600,                      // 1h
   HEARTBEAT: 120,                   // 2 min
 } as const;
