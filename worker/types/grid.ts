@@ -1,3 +1,7 @@
+import type { Series as StoredSeries } from "../../src/shared/types/series";
+import type { SeriesState as StoredSeriesState } from "../../src/shared/types/series-state";
+import type { Tournament as StoredTournament } from "../../src/shared/types/tournament";
+
 // --- Grid API types (used by scheduler registry) ---
 
 export interface GridSeries {
@@ -18,40 +22,8 @@ export interface GridSeriesState {
 
 // --- Fetched types (returned by grid/ fetchers) ---
 
-export interface FetchedTournament {
-  id: string;
-  name: string;
-  nameShortened: string;
-  logoUrl: string | null;
-  startDate: string | null;
-  endDate: string | null;
-  prizePool: number | null;
-  venueType: string | null;
-  teams: { id: string; name: string }[];
-}
+export type FetchedTournament = StoredTournament;
 
-export interface FetchedSeries {
-  id: string;
-  tournamentId: string;
-  startTimeScheduled: string;
-  format: string;
-  type: string;
-  teams: { id: string; name: string; logoUrl: string | null }[];
-  streams: string[];
-}
+export type FetchedSeries = StoredSeries;
 
-export interface FetchedSeriesState {
-  seriesId: string;
-  format: string;
-  started: boolean;
-  finished: boolean;
-  teams: { id: string; name: string; score: number; won: boolean }[];
-  games: {
-    id: string;
-    sequenceNumber: number;
-    mapName: string;
-    started: boolean;
-    finished: boolean;
-    teams: { id: string; name: string; side: string; score: number; won: boolean }[];
-  }[];
-}
+export type FetchedSeriesState = StoredSeriesState;

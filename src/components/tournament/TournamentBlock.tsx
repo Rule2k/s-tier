@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import {
   useEffect,
   useId,
@@ -50,7 +51,14 @@ const TournamentStatusBadge = ({ status }: { status: TournamentStatus }) => {
       {status.winner && (
         <div className="mt-0.5 flex items-center justify-end gap-1.5">
           {status.winner.logoUrl && (
-            <img src={status.winner.logoUrl} alt="" className="h-4 w-4 rounded object-contain" />
+            <Image
+              src={status.winner.logoUrl}
+              alt=""
+              width={16}
+              height={16}
+              unoptimized
+              className="h-4 w-4 rounded object-contain"
+            />
           )}
           <span className="text-[11px] font-medium text-white">{status.winner.name}</span>
         </div>
@@ -112,7 +120,14 @@ export const TournamentBlock = ({
         <div className="px-5 py-3.5 sm:px-6">
           <div className="flex items-center gap-3 sm:gap-4">
             {tournament.logoUrl && (
-              <img src={tournament.logoUrl} alt="" className="h-9 w-9 shrink-0 rounded-lg object-contain opacity-90" />
+              <Image
+                src={tournament.logoUrl}
+                alt=""
+                width={36}
+                height={36}
+                unoptimized
+                className="h-9 w-9 shrink-0 rounded-lg object-contain opacity-90"
+              />
             )}
 
             <div className="min-w-0 flex-1">

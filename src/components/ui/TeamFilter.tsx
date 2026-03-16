@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState, useRef, useEffect } from "react";
 
 interface Team {
@@ -84,7 +85,14 @@ export const TeamFilter = ({ teams, selectedTeam, onChange }: TeamFilterProps) =
                 className="flex w-full items-center gap-2 px-3 py-2 text-sm text-gray-300 hover:bg-white/10 hover:text-white"
               >
                 {team.imageUrl ? (
-                  <img src={team.imageUrl} alt="" className="h-5 w-5 rounded object-contain" />
+                  <Image
+                    src={team.imageUrl}
+                    alt=""
+                    width={20}
+                    height={20}
+                    unoptimized
+                    className="h-5 w-5 rounded object-contain"
+                  />
                 ) : (
                   <span className="h-5 w-5 rounded bg-white/10" />
                 )}

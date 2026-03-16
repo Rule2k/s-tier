@@ -1,15 +1,17 @@
 import { startDiscoveryLoop } from "./discovery";
 import { startSeriesRefreshLoop } from "./series-refresh";
 import { logWorkerStart, logError } from "./logger";
+import { hydrateSchedulerFromRedis } from "./discovery";
 
 const run = async () => {
   logWorkerStart();
 
-  // Discovery loop first — populates tournament & series data
-  await startDiscoveryLoop();
-
-  // Then start the series refresh loop
-  await startSeriesRefreshLoop();
+  // Hydrate from Redis first, then start both loops.
+  await hydrateSchedulerFromRedis();
+  await Promise.all([
+    startDiscoveryLoop(),
+    startSeriesRefreshLoop(),
+  ]);
 };
 
 run().catch((error) => {

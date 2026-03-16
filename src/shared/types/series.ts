@@ -2,7 +2,7 @@
 export interface Series {
   id: string;
   tournamentId: string;
-  teams: [TeamInfo, TeamInfo];
+  teams: TeamInfo[];
   startTimeScheduled: string;
   format: string; // "Bo1" | "Bo3" | "Bo5"
   type: string; // "ESPORTS"
@@ -12,4 +12,5 @@ export interface Series {
 export interface TeamInfo {
   id: string;
   name: string;
+  logoUrl: string | null;
 }

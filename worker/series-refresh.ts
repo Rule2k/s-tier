@@ -11,8 +11,20 @@ import {
   cleanupPerSeriesBuckets,
   getRemaining,
 } from "./rate-limiter";
-import { logFastCycle, logError } from "./logger";
+import { logError } from "./logger";
 import { config } from "./config";
+
+interface RateLimitHeaders {
+  get(name: string): string | null;
+}
+
+interface RateLimitResponse {
+  headers?: RateLimitHeaders;
+}
+
+interface RateLimitError {
+  response?: RateLimitResponse;
+}
 
 // --- State ---
 
@@ -20,7 +32,7 @@ let cycleNumber = 0;
 
 // --- Series refresh cycle ---
 
-const runRefreshCycle = async (): Promise<void> => {
+export const runRefreshCycle = async (): Promise<void> => {
   cycleNumber++;
   const start = Date.now();
 
@@ -31,6 +43,8 @@ const runRefreshCycle = async (): Promise<void> => {
   let budgetExhausted = false;
 
   try {
+    await writeHeartbeat();
+
     const series = getEligibleSeries();
 
     for (const { tier } of series) {
@@ -79,10 +93,6 @@ const runRefreshCycle = async (): Promise<void> => {
           await writeSeriesMeta(entry.seriesId, status);
         } else {
           entry.lastFetchedAt = Date.now();
-          const scheduled = new Date(entry.gridSeries.startTimeScheduled).getTime();
-          if (scheduled < Date.now()) {
-            entry.noStateConfirmed = true;
-          }
         }
       } catch (error) {
         entry.failCount++;
@@ -90,7 +100,7 @@ const runRefreshCycle = async (): Promise<void> => {
         errors++;
 
         if (isRateLimitError(error)) {
-          const headers = (error as any)?.response?.headers;
+          const headers = (error as RateLimitError).response?.headers;
           const resetSeconds = parseInt(headers?.get?.("x-ratelimit-reset") ?? "60", 10);
           console.log(`[refresh] API rate limited — waiting ${resetSeconds}s`);
           rateLimited = true;
@@ -112,8 +122,6 @@ const runRefreshCycle = async (): Promise<void> => {
       if (!entry.state?.finished) activeIds.add(entry.seriesId);
     }
     cleanupPerSeriesBuckets(activeIds);
-
-    await writeHeartbeat();
 
     const totalFetched = Object.values(fetched).reduce((a, b) => a + b, 0);
     const duration = ((Date.now() - start) / 1000).toFixed(1);

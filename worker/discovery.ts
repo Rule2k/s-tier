@@ -1,55 +1,81 @@
 import { discoverTournaments, fetchTournamentSeries } from "./grid/central-data";
-import { writeTournaments, writeTournamentSeries, writeDiscoveryTimestamp } from "./redis-writer";
-import { upsertSeries, getRegistry } from "./scheduler";
+import {
+  writeTournaments,
+  writeTournamentSeries,
+  writeDiscoveryTimestamp,
+  deleteTournaments,
+} from "./redis-writer";
+import {
+  upsertSeries,
+  getRegistry,
+  getSeriesForTournament,
+  removeSeriesNotIn,
+} from "./scheduler";
 import { logError } from "./logger";
-import { drainBucket, centralBucket } from "./rate-limiter";
+import {
+  cleanupPerSeriesBuckets,
+  drainBucket,
+  centralBucket,
+} from "./rate-limiter";
 import { config } from "./config";
 import redis from "../src/lib/redis/client";
 import { REDIS_KEYS } from "../src/shared/redis-keys";
 import type { FetchedSeries } from "./types/grid";
+import type { Series as StoredSeries } from "../src/shared/types/series";
+import type { SeriesState as StoredSeriesState } from "../src/shared/types/series-state";
+import type { Tournament as StoredTournament } from "../src/shared/types/tournament";
 
 // --- State ---
 
 /** Set of tracked tournament IDs discovered so far. */
 const trackedTournamentIds = new Set<string>();
 
-/** Tournaments whose series have already been fetched successfully. */
-const fullyDiscoveredTournaments = new Set<string>();
-
 // --- Discovery cycle ---
 
-const runDiscoveryCycle = async (): Promise<void> => {
+const parseJson = <T>(value: string): T => JSON.parse(value) as T;
+
+const syncTrackedTournamentIds = (nextTournamentIds: Iterable<string>) => {
+  trackedTournamentIds.clear();
+  for (const tournamentId of nextTournamentIds) {
+    trackedTournamentIds.add(tournamentId);
+  }
+};
+
+export const runDiscoveryCycle = async (): Promise<void> => {
   const start = Date.now();
 
   try {
+    const previousTournamentIds = await redis.zrangebyscore(
+      REDIS_KEYS.tournaments,
+      "-inf",
+      "+inf",
+    );
+
     // 1. Discover tournaments via series of tracked teams (server-side filter)
     const tracked = await discoverTournaments(config.teamFilter.teamIds);
+    const trackedTournamentIdSet = new Set(tracked.map((tournament) => tournament.id));
 
     console.log(`[discovery] ${tracked.length} tournaments discovered via team series`);
 
-    // Track discovered IDs
-    for (const t of tracked) {
-      trackedTournamentIds.add(t.id);
-    }
+    syncTrackedTournamentIds(trackedTournamentIdSet);
 
     // 2. Write tournament index to Redis
     await writeTournaments(tracked);
 
     // 3. For each tracked tournament, fetch its series
     const allSeries: FetchedSeries[] = [];
+    const processedTournamentIds = new Set<string>();
+    const nextRegistrySeriesIds = new Set<string>();
+    let fetchErrors = 0;
 
     for (const tournament of tracked) {
-      // Skip only if series data actually exists in Redis (not just in-memory)
-      if (fullyDiscoveredTournaments.has(tournament.id)) {
-        const seriesCount = await redis.zcard(REDIS_KEYS.tournamentSeries(tournament.id));
-        if (seriesCount > 0) continue;
-        // Redis data expired — need to re-fetch
-        fullyDiscoveredTournaments.delete(tournament.id);
-      }
-
       try {
         const series = await fetchTournamentSeries(tournament.id);
+        processedTournamentIds.add(tournament.id);
         allSeries.push(...series);
+        for (const s of series) {
+          nextRegistrySeriesIds.add(s.id);
+        }
 
         // Register each series in the scheduler
         for (const s of series) {
@@ -71,10 +97,17 @@ const runDiscoveryCycle = async (): Promise<void> => {
 
         // Write series for this tournament to Redis
         await writeTournamentSeries(tournament.id, series);
-        fullyDiscoveredTournaments.add(tournament.id);
       } catch (error) {
+        fetchErrors++;
+        processedTournamentIds.add(tournament.id);
+        for (const entry of getSeriesForTournament(tournament.id)) {
+          nextRegistrySeriesIds.add(entry.seriesId);
+        }
+
         if (isRateLimitError(error)) {
-          console.log(`[discovery] Rate limited — pausing series fetch (${fullyDiscoveredTournaments.size}/${tracked.length} tournaments covered)`);
+          console.log(
+            `[discovery] Rate limited — pausing series fetch (${processedTournamentIds.size}/${tracked.length} tournaments attempted)`,
+          );
           drainBucket(centralBucket);
           break;
         }
@@ -82,10 +115,27 @@ const runDiscoveryCycle = async (): Promise<void> => {
       }
     }
 
+    for (const tournament of tracked) {
+      if (processedTournamentIds.has(tournament.id)) continue;
+      for (const entry of getSeriesForTournament(tournament.id)) {
+        nextRegistrySeriesIds.add(entry.seriesId);
+      }
+    }
+
+    const staleTournamentIds = previousTournamentIds.filter(
+      (tournamentId) => !trackedTournamentIdSet.has(tournamentId),
+    );
+    await deleteTournaments(staleTournamentIds);
+
+    const removedSeries = removeSeriesNotIn(nextRegistrySeriesIds);
+    cleanupPerSeriesBuckets(nextRegistrySeriesIds);
+
     await writeDiscoveryTimestamp();
 
     const duration = ((Date.now() - start) / 1000).toFixed(1);
-    console.log(`[discovery] Done in ${duration}s — ${fullyDiscoveredTournaments.size}/${tracked.length} tournaments covered, ${allSeries.length} new series registered`);
+    console.log(
+      `[discovery] Done in ${duration}s — ${tracked.length} tournaments indexed, ${allSeries.length} series fetched, ${staleTournamentIds.length} stale tournaments removed, ${removedSeries} registry series pruned, ${fetchErrors} fetch errors`,
+    );
   } catch (error) {
     logError("Discovery cycle failed", error);
 
@@ -110,7 +160,23 @@ const isRateLimitError = (error: unknown): boolean => {
 
 // --- Hydrate scheduler from Redis on startup ---
 
-const hydrateSchedulerFromRedis = async (): Promise<void> => {
+const mapStoredSeriesStateToRegistryState = (
+  state: StoredSeriesState,
+) => ({
+  id: state.seriesId,
+  started: state.started,
+  finished: state.finished,
+  teams: state.teams,
+  games: state.games.map((game) => ({
+    sequenceNumber: game.sequenceNumber,
+    started: game.started,
+    finished: game.finished,
+    map: { name: game.mapName },
+    teams: game.teams.map((team) => ({ score: team.score, side: team.side })),
+  })),
+});
+
+export const hydrateSchedulerFromRedis = async (): Promise<void> => {
   try {
     const tournamentIds = await redis.zrevrangebyscore(
       REDIS_KEYS.tournaments, "+inf", "-inf", "LIMIT", 0, 200,
@@ -128,7 +194,7 @@ const hydrateSchedulerFromRedis = async (): Promise<void> => {
 
       if (!tournamentJson || seriesIds.length === 0) continue;
 
-      const tournament = JSON.parse(tournamentJson);
+      const tournament = parseJson<StoredTournament>(tournamentJson);
 
       // Batch-read all series data + states
       const pipeline = redis.pipeline();
@@ -139,22 +205,12 @@ const hydrateSchedulerFromRedis = async (): Promise<void> => {
       const results = await pipeline.exec();
       if (!results) continue;
 
-      // Remove TTLs from existing keys (migrate from old TTL-based approach)
-      const persistPipeline = redis.pipeline();
-      persistPipeline.persist(REDIS_KEYS.tournament(tournamentId));
-      persistPipeline.persist(REDIS_KEYS.tournamentSeries(tournamentId));
-      for (const id of seriesIds) {
-        persistPipeline.persist(REDIS_KEYS.series(id));
-        persistPipeline.persist(REDIS_KEYS.seriesState(id));
-      }
-      await persistPipeline.exec();
-
       for (let i = 0; i < seriesIds.length; i++) {
         const seriesJson = results[i * 2]?.[1] as string | null;
         const stateJson = results[i * 2 + 1]?.[1] as string | null;
         if (!seriesJson) continue;
 
-        const s = JSON.parse(seriesJson);
+        const s = parseJson<StoredSeries>(seriesJson);
         const entry = upsertSeries(tournamentId, {
           id: s.id,
           startTimeScheduled: s.startTimeScheduled,
@@ -165,32 +221,19 @@ const hydrateSchedulerFromRedis = async (): Promise<void> => {
             nameShortened: tournament.nameShortened ?? tournament.name,
             logoUrl: tournament.logoUrl ?? "",
           },
-          teams: (s.teams ?? []).map((t: { id: string; name: string; logoUrl?: string }) => ({
+          teams: (s.teams ?? []).map((t) => ({
             baseInfo: { id: t.id, name: t.name, logoUrl: t.logoUrl ?? "" },
           })),
         });
 
         // Restore state so live/finished series get correct priority
         if (stateJson) {
-          const state = JSON.parse(stateJson);
-          entry.state = {
-            id: state.seriesId,
-            started: state.started,
-            finished: state.finished,
-            teams: state.teams,
-            games: (state.games ?? []).map((g: any) => ({
-              sequenceNumber: g.sequenceNumber,
-              started: g.started,
-              finished: g.finished,
-              map: { name: g.mapName },
-              teams: (g.teams ?? []).map((t: any) => ({ score: t.score, side: t.side })),
-            })),
-          };
+          const state = parseJson<StoredSeriesState>(stateJson);
+          entry.state = mapStoredSeriesStateToRegistryState(state);
           // Live series: lastFetchedAt = 0 so they refresh immediately
           // Finished series: lastFetchedAt = now (no rush to re-fetch)
           if (state.finished) {
             entry.lastFetchedAt = Date.now();
-            entry.noStateConfirmed = true;
           }
         }
 
@@ -198,7 +241,6 @@ const hydrateSchedulerFromRedis = async (): Promise<void> => {
       }
 
       trackedTournamentIds.add(tournamentId);
-      fullyDiscoveredTournaments.add(tournamentId);
     }
 
     // Count states
@@ -228,9 +270,6 @@ const scheduleNextDiscovery = () => {
 };
 
 export const startDiscoveryLoop = async (): Promise<void> => {
-  // Hydrate scheduler with existing Redis data (no API calls needed)
-  await hydrateSchedulerFromRedis();
-
   // Initial discovery run
   await runDiscoveryCycle();
 

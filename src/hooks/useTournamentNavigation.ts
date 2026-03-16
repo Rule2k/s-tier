@@ -3,7 +3,7 @@
 import { useState, useCallback, useMemo } from "react";
 import { sortTournamentsByStartDate } from "@/utils/tournaments/sortTournamentsByStartDate";
 import { mergeUniqueTournaments } from "@/utils/tournaments/mergeUniqueTournaments";
-import { useTournaments, fetchTournamentById } from "./useTournaments";
+import { useTournaments } from "./useTournaments";
 import type { Tournament } from "@/types/match";
 
 const PAGE_SIZE = 5;
@@ -20,15 +20,16 @@ export const useTournamentNavigation = () => {
     "previous" | "next" | null
   >(null);
 
-  const defaultTournaments = data?.tournaments ?? [];
   const total = data?.total ?? 0;
 
   const allLoaded = useMemo(
-    () =>
-      sortTournamentsByStartDate(
+    () => {
+      const defaultTournaments = data?.tournaments ?? [];
+      return sortTournamentsByStartDate(
         mergeUniqueTournaments([...defaultTournaments, ...extraTournaments]),
-      ),
-    [defaultTournaments, extraTournaments],
+      );
+    },
+    [data?.tournaments, extraTournaments],
   );
 
   // Redis returns tournaments most-recent-first (offset 0 = newest).

@@ -15,7 +15,6 @@ export const classifyTier = (
   state: GridSeriesState | null,
   scheduledAt: string,
   now = Date.now(),
-  noStateConfirmed = false,
 ): PriorityTier => {
   // If we have state, use it for started/finished detection
   if (state?.finished) return "SKIP";
@@ -26,8 +25,6 @@ export const classifyTier = (
   const timeUntil = scheduledTime - now;
 
   if (timeUntil < 0) {
-    // API confirmed no state exists → no point retrying
-    if (noStateConfirmed) return "SKIP";
     // Past series without state — low priority backfill, not urgent
     return "P3";
   }
@@ -62,7 +59,6 @@ export const upsertSeries = (
     state: null,
     lastFetchedAt: 0,
     failCount: 0,
-    noStateConfirmed: false,
   };
   registry.set(gridSeries.id, entry);
   return entry;
@@ -110,7 +106,6 @@ export const getEligibleSeries = (now = Date.now()): EligibleSeries[] => {
       entry.state,
       entry.gridSeries.startTimeScheduled,
       now,
-      entry.noStateConfirmed,
     );
 
     if (tier === "SKIP") continue;
@@ -158,7 +153,6 @@ export const getTierCounts = (now = Date.now()): TierCounts => {
       entry.state,
       entry.gridSeries.startTimeScheduled,
       now,
-      entry.noStateConfirmed,
     );
     counts[tier]++;
   }

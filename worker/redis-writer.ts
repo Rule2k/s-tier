@@ -3,27 +3,72 @@ import { REDIS_KEYS, REDIS_TTL } from "../src/shared/redis-keys";
 import type { FetchedTournament, FetchedSeries, FetchedSeriesState } from "./types/grid";
 import { logError } from "./logger";
 
+type RedisPipeline = ReturnType<typeof redis.pipeline>;
+
+const getTimestampScore = (date: string | null): number => {
+  if (!date) return 0;
+  const timestamp = new Date(date).getTime();
+  return Number.isFinite(timestamp) ? timestamp : 0;
+};
+
+const throwPipelineError = (context: string, error: unknown): never => {
+  logError(context, error);
+  throw error instanceof Error ? error : new Error(String(error));
+};
+
+const execPipeline = async (
+  pipeline: RedisPipeline,
+  context: string,
+) => {
+  let results;
+  try {
+    results = await pipeline.exec();
+  } catch (error) {
+    throwPipelineError(context, error);
+  }
+
+  if (!results) {
+    throwPipelineError(context, new Error("Redis pipeline returned null"));
+  }
+
+  for (const [error] of results) {
+    if (error) {
+      throwPipelineError(context, error);
+    }
+  }
+
+  return results;
+};
+
+const deleteSeriesArtifacts = (
+  pipeline: RedisPipeline,
+  seriesIds: Iterable<string>,
+) => {
+  for (const seriesId of seriesIds) {
+    pipeline.del(REDIS_KEYS.series(seriesId));
+    pipeline.del(REDIS_KEYS.seriesState(seriesId));
+    pipeline.del(REDIS_KEYS.metaSeriesLastRefresh(seriesId));
+    pipeline.del(REDIS_KEYS.metaSeriesStatus(seriesId));
+  }
+};
+
 // --- Tournament index (Sorted Set) ---
 
 export const writeTournaments = async (
   tournaments: FetchedTournament[],
 ): Promise<void> => {
-  if (tournaments.length === 0) return;
-
   const pipeline = redis.pipeline();
 
   // Clear and rebuild the sorted set (no TTL — rewritten every discovery cycle)
   pipeline.del(REDIS_KEYS.tournaments);
 
   for (const t of tournaments) {
-    const score = Number(t.id);
+    const score = getTimestampScore(t.startDate);
     pipeline.zadd(REDIS_KEYS.tournaments, score, t.id);
     pipeline.set(REDIS_KEYS.tournament(t.id), JSON.stringify(t));
   }
 
-  await pipeline.exec().catch((err) =>
-    logError("Redis pipeline failed (writeTournaments)", err),
-  );
+  await execPipeline(pipeline, "Redis pipeline failed (writeTournaments)");
 };
 
 // --- Series for a tournament (Sorted Set) ---
@@ -32,12 +77,20 @@ export const writeTournamentSeries = async (
   tournamentId: string,
   seriesList: FetchedSeries[],
 ): Promise<void> => {
-  if (seriesList.length === 0) return;
-
   const key = REDIS_KEYS.tournamentSeries(tournamentId);
+  const existingSeriesIds = await redis
+    .zrangebyscore(key, "-inf", "+inf")
+    .catch((error) => throwPipelineError(
+      `Redis read failed (writeTournamentSeries ${tournamentId})`,
+      error,
+    ));
+
+  const nextSeriesIds = new Set(seriesList.map((series) => series.id));
+  const staleSeriesIds = existingSeriesIds.filter((seriesId) => !nextSeriesIds.has(seriesId));
   const pipeline = redis.pipeline();
 
   pipeline.del(key);
+  deleteSeriesArtifacts(pipeline, staleSeriesIds);
 
   for (const s of seriesList) {
     const score = new Date(s.startTimeScheduled).getTime();
@@ -46,9 +99,38 @@ export const writeTournamentSeries = async (
     pipeline.set(REDIS_KEYS.series(s.id), JSON.stringify(s));
   }
 
-  await pipeline.exec().catch((err) =>
-    logError(`Redis pipeline failed (writeTournamentSeries ${tournamentId})`, err),
+  await execPipeline(
+    pipeline,
+    `Redis pipeline failed (writeTournamentSeries ${tournamentId})`,
   );
+};
+
+export const deleteTournaments = async (
+  tournamentIds: Iterable<string>,
+): Promise<void> => {
+  const ids = [...new Set(tournamentIds)];
+  if (ids.length === 0) return;
+
+  const seriesLists = await Promise.all(
+    ids.map((tournamentId) =>
+      redis
+        .zrangebyscore(REDIS_KEYS.tournamentSeries(tournamentId), "-inf", "+inf")
+        .catch((error) => throwPipelineError(
+          `Redis read failed (deleteTournaments ${tournamentId})`,
+          error,
+        )),
+    ),
+  );
+
+  const pipeline = redis.pipeline();
+
+  ids.forEach((tournamentId, index) => {
+    pipeline.del(REDIS_KEYS.tournament(tournamentId));
+    pipeline.del(REDIS_KEYS.tournamentSeries(tournamentId));
+    deleteSeriesArtifacts(pipeline, seriesLists[index]);
+  });
+
+  await execPipeline(pipeline, "Redis pipeline failed (deleteTournaments)");
 };
 
 // --- Series state ---
@@ -59,14 +141,23 @@ export const writeSeriesState = async (
 ): Promise<void> => {
   if (state.finished) {
     // Finished — static, no TTL
-    await redis
-      .set(REDIS_KEYS.seriesState(seriesId), JSON.stringify(state))
-      .catch((err) => logError(`Redis write failed (seriesState ${seriesId})`, err));
+    try {
+      await redis.set(REDIS_KEYS.seriesState(seriesId), JSON.stringify(state));
+    } catch (error) {
+      throwPipelineError(`Redis write failed (seriesState ${seriesId})`, error);
+    }
   } else {
     // Live/upcoming — 6h fallback in case worker dies
-    await redis
-      .set(REDIS_KEYS.seriesState(seriesId), JSON.stringify(state), "EX", REDIS_TTL.SERIES_STATE_LIVE)
-      .catch((err) => logError(`Redis write failed (seriesState ${seriesId})`, err));
+    try {
+      await redis.set(
+        REDIS_KEYS.seriesState(seriesId),
+        JSON.stringify(state),
+        "EX",
+        REDIS_TTL.SERIES_STATE_LIVE,
+      );
+    } catch (error) {
+      throwPipelineError(`Redis write failed (seriesState ${seriesId})`, error);
+    }
   }
 };
 
@@ -91,23 +182,35 @@ export const writeSeriesMeta = async (
     REDIS_TTL.META,
   );
 
-  await pipeline.exec().catch((err) =>
-    logError(`Redis pipeline failed (writeSeriesMeta ${seriesId})`, err),
-  );
+  await execPipeline(pipeline, `Redis pipeline failed (writeSeriesMeta ${seriesId})`);
 };
 
 // --- Worker heartbeat ---
 
 export const writeHeartbeat = async (): Promise<void> => {
-  await redis
-    .set(REDIS_KEYS.metaWorkerHeartbeat, String(Date.now()), "EX", REDIS_TTL.HEARTBEAT)
-    .catch((err) => logError("Redis write failed (heartbeat)", err));
+  try {
+    await redis.set(
+      REDIS_KEYS.metaWorkerHeartbeat,
+      String(Date.now()),
+      "EX",
+      REDIS_TTL.HEARTBEAT,
+    );
+  } catch (error) {
+    throwPipelineError("Redis write failed (heartbeat)", error);
+  }
 };
 
 // --- Discovery timestamp ---
 
 export const writeDiscoveryTimestamp = async (): Promise<void> => {
-  await redis
-    .set(REDIS_KEYS.metaDiscoveryLastRun, String(Date.now()), "EX", REDIS_TTL.META)
-    .catch((err) => logError("Redis write failed (discovery timestamp)", err));
+  try {
+    await redis.set(
+      REDIS_KEYS.metaDiscoveryLastRun,
+      String(Date.now()),
+      "EX",
+      REDIS_TTL.META,
+    );
+  } catch (error) {
+    throwPipelineError("Redis write failed (discovery timestamp)", error);
+  }
 };

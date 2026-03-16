@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { format } from "date-fns";
 import { getMapWinnerIndex } from "@/utils/matches/getMapWinnerIndex";
 import { getPlayedMaps } from "@/utils/matches/getPlayedMaps";
@@ -24,7 +25,14 @@ const TeamRow = ({
 }) => (
   <div className={`flex items-center gap-2 sm:gap-3 ${isMuted ? "opacity-40" : "text-white"}`}>
     {team.logoUrl ? (
-      <img src={team.logoUrl} alt={team.name} className="h-6 w-6 sm:h-7 sm:w-7" />
+      <Image
+        src={team.logoUrl}
+        alt={team.name}
+        width={28}
+        height={28}
+        unoptimized
+        className="h-6 w-6 sm:h-7 sm:w-7"
+      />
     ) : (
       <div className="h-6 w-6 rounded-md bg-gray-700 sm:h-7 sm:w-7" />
     )}
@@ -73,7 +81,14 @@ const MapScoreLine = ({
         <span key={map.mapNumber} className="flex items-center gap-1.5">
           {index > 0 && <span className="text-white/[0.08]">·</span>}
           {winnerLogo && (
-            <img src={winnerLogo} alt="" className="hidden h-3.5 w-3.5 opacity-80 sm:block" />
+            <Image
+              src={winnerLogo}
+              alt=""
+              width={14}
+              height={14}
+              unoptimized
+              className="hidden h-3.5 w-3.5 opacity-80 sm:block"
+            />
           )}
           <span className="lowercase">{map.mapName}</span>
           <span className={map.status === "running" ? "font-semibold text-yellow-300" : "text-gray-400"}>

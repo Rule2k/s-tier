@@ -6,10 +6,6 @@ export interface SeriesState {
   finished: boolean;
   teams: SeriesTeamScore[];
   games: GameScore[];
-  draftActions: DraftAction[];
-  updatedAt: string;
-  startedAt: string | null;
-  duration: string;
 }
 
 export interface SeriesTeamScore {
@@ -34,9 +30,4 @@ export interface GameTeamScore {
   side: string;
   score: number;
   won: boolean;
-}
-
-export interface DraftAction {
-  id: string;
-  type: "ban" | "pick";
 }

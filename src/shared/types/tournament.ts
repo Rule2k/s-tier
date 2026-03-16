@@ -7,6 +7,11 @@ export interface Tournament {
   startDate: string | null;
   endDate: string | null;
   prizePool: number | null;
-  venueType: "LAN" | "ONLINE" | "UNKNOWN";
-  teams: { id: string; name: string }[];
+  venueType: string | null;
+  teams: TournamentTeam[];
+}
+
+export interface TournamentTeam {
+  id: string;
+  name: string;
 }
