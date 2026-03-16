@@ -26,6 +26,9 @@ export const REDIS_KEYS = {
   /** String: unix timestamp — worker heartbeat */
   metaWorkerHeartbeat: `${PREFIX}:meta:worker:heartbeat`,
 
+  /** String: worker instance ID with TTL — leader election lock */
+  metaWorkerLock: `${PREFIX}:meta:worker:lock`,
+
   /** String: unix timestamp — last discovery run */
   metaDiscoveryLastRun: `${PREFIX}:meta:discovery:lastRun`,
 } as const;

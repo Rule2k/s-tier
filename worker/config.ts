@@ -1,3 +1,5 @@
+import { WORKER_RUNTIME } from "../src/shared/worker-runtime";
+
 /** Worker configuration — all tunables in one place. */
 
 export const config = {
@@ -10,6 +12,9 @@ export const config = {
   seriesRefresh: {
     intervalMs: 15_000, // 15s between cycles
   },
+
+  /** Leader election lock for multi-instance safety */
+  workerLock: WORKER_RUNTIME.lock,
 
   /** Team filter — only track tournaments these teams participate in */
   teamFilter: {

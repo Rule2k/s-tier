@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import redis from "@/lib/redis/client";
 import { REDIS_KEYS } from "@/shared/redis-keys";
+import { WORKER_RUNTIME } from "@/shared/worker-runtime";
+import type { WorkerHealth } from "@/shared/types/worker-health";
 
 /**
  * GET /api/health
@@ -18,17 +20,27 @@ export const GET = async () => {
     const heartbeatTs = heartbeat ? parseInt(heartbeat, 10) : null;
     const discoveryTs = lastDiscovery ? parseInt(lastDiscovery, 10) : null;
 
-    const workerAlive = heartbeatTs !== null && now - heartbeatTs < 2 * 60_000;
-
-    return NextResponse.json({
-      workerAlive,
+    const body: WorkerHealth = {
+      workerAlive:
+        heartbeatTs !== null
+        && now - heartbeatTs < WORKER_RUNTIME.health.heartbeatAliveWindowMs,
+      staleData:
+        discoveryTs === null
+        || now - discoveryTs > WORKER_RUNTIME.health.staleDataAfterMs,
       lastHeartbeat: heartbeatTs ? new Date(heartbeatTs).toISOString() : null,
       lastDiscovery: discoveryTs ? new Date(discoveryTs).toISOString() : null,
-    });
+    };
+
+    return NextResponse.json(body);
   } catch (error) {
     console.error("[api/health] Error:", error);
     return NextResponse.json(
-      { workerAlive: false, lastHeartbeat: null, lastDiscovery: null },
+      {
+        workerAlive: false,
+        staleData: true,
+        lastHeartbeat: null,
+        lastDiscovery: null,
+      } satisfies WorkerHealth,
       { status: 500 },
     );
   }
