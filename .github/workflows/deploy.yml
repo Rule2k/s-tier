@@ -30,8 +30,18 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
+            set -euo pipefail
             cd /var/www/s-tier
-            git pull origin main
-            docker compose build
-            GRID_API_KEY=${{ secrets.GRID_API_KEY }} docker compose up -d
+
+            git fetch --prune origin
+            git reset --hard origin/main
+
+            export GRID_API_KEY=${{ secrets.GRID_API_KEY }}
+
+            docker compose up -d redis
+            docker compose exec -T redis sh -lc "redis-cli --scan --pattern 's-tier:*' | xargs -r redis-cli DEL"
+
+            docker compose up -d --build --force-recreate app worker
+            git rev-parse HEAD
+            docker compose ps
             docker image prune -f
