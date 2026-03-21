@@ -68,8 +68,24 @@ export const runDiscoveryCycle = async (): Promise<void> => {
     const nextRegistrySeriesIds = new Set<string>();
     let fetchErrors = 0;
 
+    let skippedFinished = 0;
+
     for (const tournament of tracked) {
       try {
+        // Skip re-fetching tournaments where all series are finished
+        const existingSeries = getSeriesForTournament(tournament.id);
+        if (
+          existingSeries.length > 0 &&
+          existingSeries.every((e) => e.state?.finished)
+        ) {
+          skippedFinished++;
+          processedTournamentIds.add(tournament.id);
+          for (const entry of existingSeries) {
+            nextRegistrySeriesIds.add(entry.seriesId);
+          }
+          continue;
+        }
+
         const series = await fetchTournamentSeries(tournament.id);
         processedTournamentIds.add(tournament.id);
         allSeries.push(...series);
@@ -134,7 +150,7 @@ export const runDiscoveryCycle = async (): Promise<void> => {
 
     const duration = ((Date.now() - start) / 1000).toFixed(1);
     console.log(
-      `[discovery] Done in ${duration}s — ${tracked.length} tournaments indexed, ${allSeries.length} series fetched, ${staleTournamentIds.length} stale tournaments removed, ${removedSeries} registry series pruned, ${fetchErrors} fetch errors`,
+      `[discovery] Done in ${duration}s — ${tracked.length} tournaments indexed (${skippedFinished} fully finished, skipped), ${allSeries.length} series fetched, ${staleTournamentIds.length} stale tournaments removed, ${removedSeries} registry series pruned, ${fetchErrors} fetch errors`,
     );
   } catch (error) {
     logError("Discovery cycle failed", error);
