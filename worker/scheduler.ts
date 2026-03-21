@@ -2,13 +2,11 @@ import type { GridSeries, GridSeriesState } from "./types/grid";
 import type { PriorityTier, SeriesEntry, EligibleSeries, TierCounts } from "./types/scheduler";
 
 const THIRTY_MINUTES_MS = 30 * 60 * 1000;
-const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000;
 
 export const TIER_INTERVALS: Record<Exclude<PriorityTier, "SKIP">, number> = {
   P0: 15_000,      // 15s — live matches
   P1: 2 * 60_000,  // 2min — starting soon
-  P2: 10 * 60_000, // 10min — today
-  P3: 30 * 60_000, // 30min — future
+  P3: 30 * 60_000, // 30min — past backfill
 };
 
 export const classifyTier = (
@@ -30,8 +28,7 @@ export const classifyTier = (
   }
 
   if (timeUntil <= THIRTY_MINUTES_MS) return "P1";
-  if (timeUntil <= TWENTY_FOUR_HOURS_MS) return "P2";
-  return "P3";
+  return "SKIP"; // >30min — no useful data to fetch until match is imminent
 };
 
 // --- Series registry ---
@@ -146,7 +143,7 @@ export const getEligibleSeries = (now = Date.now()): EligibleSeries[] => {
 // --- Stats ---
 
 export const getTierCounts = (now = Date.now()): TierCounts => {
-  const counts: TierCounts = { P0: 0, P1: 0, P2: 0, P3: 0, SKIP: 0 };
+  const counts: TierCounts = { P0: 0, P1: 0, P3: 0, SKIP: 0 };
 
   for (const entry of registry.values()) {
     const tier = classifyTier(

@@ -36,8 +36,8 @@ export const runRefreshCycle = async (): Promise<void> => {
   cycleNumber++;
   const start = Date.now();
 
-  const fetched: Record<string, number> = { P0: 0, P1: 0, P2: 0, P3: 0 };
-  const eligible: Record<string, number> = { P0: 0, P1: 0, P2: 0, P3: 0 };
+  const fetched: Record<string, number> = { P0: 0, P1: 0, P3: 0 };
+  const eligible: Record<string, number> = { P0: 0, P1: 0, P3: 0 };
   let errors = 0;
   let rateLimited = false;
   let budgetExhausted = false;
@@ -53,7 +53,7 @@ export const runRefreshCycle = async (): Promise<void> => {
 
     const totalEligible = Object.values(eligible).reduce((a, b) => a + b, 0);
     const registrySize = getRegistry().size;
-    console.log(`[refresh] Cycle #${cycleNumber} — ${totalEligible} eligible out of ${registrySize} registered (P0: ${eligible.P0}, P1: ${eligible.P1}, P2: ${eligible.P2}, P3: ${eligible.P3}) — budget: ${getRemaining(liveGlobalBucket)}/180`);
+    console.log(`[refresh] Cycle #${cycleNumber} — ${totalEligible} eligible out of ${registrySize} registered (P0: ${eligible.P0}, P1: ${eligible.P1}, P3: ${eligible.P3}) — budget: ${getRemaining(liveGlobalBucket)}/180`);
 
     for (const { entry, tier } of series) {
       // Non-blocking: process only what the rate limit allows right now

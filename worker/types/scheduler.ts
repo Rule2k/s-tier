@@ -2,7 +2,7 @@ import type { GridSeries, GridSeriesState } from "./grid";
 
 // --- Priority tiers ---
 
-export type PriorityTier = "P0" | "P1" | "P2" | "P3" | "SKIP";
+export type PriorityTier = "P0" | "P1" | "P3" | "SKIP";
 
 // --- Series registry ---
 
@@ -28,7 +28,6 @@ export interface EligibleSeries {
 export interface TierCounts {
   P0: number;
   P1: number;
-  P2: number;
   P3: number;
   SKIP: number;
 }

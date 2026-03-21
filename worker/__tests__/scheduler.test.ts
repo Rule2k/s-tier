@@ -71,14 +71,11 @@ describe("scheduler", () => {
       expect(classifyTier(null, "2026-03-12T12:15:00Z", now)).toBe("P1");
     });
 
-    it("returns P2 for upcoming within 24h", () => {
+    it("returns SKIP for upcoming > 30 min", () => {
       // 5 hours from now
-      expect(classifyTier(null, "2026-03-12T17:00:00Z", now)).toBe("P2");
-    });
-
-    it("returns P3 for upcoming > 24h", () => {
+      expect(classifyTier(null, "2026-03-12T17:00:00Z", now)).toBe("SKIP");
       // 3 days from now
-      expect(classifyTier(null, "2026-03-15T12:00:00Z", now)).toBe("P3");
+      expect(classifyTier(null, "2026-03-15T12:00:00Z", now)).toBe("SKIP");
     });
 
     it("returns P1 for exactly 30 min boundary", () => {
@@ -144,22 +141,29 @@ describe("scheduler", () => {
       expect(eligible[0].tier).toBe("P3");
     });
 
-    it("does not return recently-fetched series", () => {
-      const gs = makeGridSeries("s1", "2026-03-12T17:00:00Z"); // P2 = 10min interval
+    it("does not return recently-fetched P3 backfill series", () => {
+      const gs = makeGridSeries("s1", "2026-03-12T11:00:00Z"); // past = P3 backfill, 30min interval
       const entry = upsertSeries("t1", gs);
-      entry.lastFetchedAt = now - 5 * 60_000; // 5min ago, less than P2 interval
+      entry.lastFetchedAt = now - 20 * 60_000; // 20min ago, less than P3 30min interval
 
       const eligible = getEligibleSeries(now);
       expect(eligible).toHaveLength(0);
     });
 
-    it("returns stale series that exceeded interval", () => {
-      const gs = makeGridSeries("s1", "2026-03-12T17:00:00Z"); // P2
+    it("returns stale P3 backfill series that exceeded interval", () => {
+      const gs = makeGridSeries("s1", "2026-03-12T11:00:00Z"); // past = P3 backfill
       const entry = upsertSeries("t1", gs);
-      entry.lastFetchedAt = now - 11 * 60_000; // 11min ago, exceeds P2 10min interval
+      entry.lastFetchedAt = now - 31 * 60_000; // 31min ago, exceeds P3 30min interval
 
       const eligible = getEligibleSeries(now);
       expect(eligible).toHaveLength(1);
+    });
+
+    it("skips future series beyond 30 min", () => {
+      upsertSeries("t1", makeGridSeries("s1", "2026-03-12T17:00:00Z")); // 5h from now
+
+      const eligible = getEligibleSeries(now);
+      expect(eligible).toHaveLength(0);
     });
 
     it("skips finished series", () => {
@@ -171,7 +175,7 @@ describe("scheduler", () => {
       expect(eligible).toHaveLength(0);
     });
 
-    it("sorts P0 before P1 before P2 before P3", () => {
+    it("sorts P0 before P1 before P3", () => {
       // P0 — live
       const e0 = upsertSeries("t1", makeGridSeries("live", "2026-03-12T11:50:00Z"));
       e0.state = makeState({ id: "live", started: true });
@@ -179,21 +183,19 @@ describe("scheduler", () => {
       // P1 — 20 min from now
       upsertSeries("t1", makeGridSeries("soon", "2026-03-12T12:20:00Z"));
 
-      // P2 — 5 hours
-      upsertSeries("t1", makeGridSeries("today", "2026-03-12T17:00:00Z"));
-
-      // P3 — 3 days
-      upsertSeries("t1", makeGridSeries("future", "2026-03-15T12:00:00Z"));
+      // P3 — past backfill (1h ago, no state)
+      upsertSeries("t1", makeGridSeries("backfill", "2026-03-12T11:00:00Z"));
 
       const eligible = getEligibleSeries(now);
-      expect(eligible.map((e) => e.tier)).toEqual(["P0", "P1", "P2", "P3"]);
+      expect(eligible.map((e) => e.tier)).toEqual(["P0", "P1", "P3"]);
     });
 
     it("within same tier, most stale first", () => {
-      const e1 = upsertSeries("t1", makeGridSeries("s1", "2026-03-12T17:00:00Z")); // P2
-      const e2 = upsertSeries("t1", makeGridSeries("s2", "2026-03-12T18:00:00Z")); // P2
-      e1.lastFetchedAt = now - 15 * 60_000; // 15min ago
-      e2.lastFetchedAt = now - 20 * 60_000; // 20min ago — more stale
+      // Both P3 backfill (past, no state)
+      const e1 = upsertSeries("t1", makeGridSeries("s1", "2026-03-12T10:00:00Z"));
+      const e2 = upsertSeries("t1", makeGridSeries("s2", "2026-03-12T09:00:00Z"));
+      e1.lastFetchedAt = now - 35 * 60_000; // 35min ago
+      e2.lastFetchedAt = now - 40 * 60_000; // 40min ago — more stale
 
       const eligible = getEligibleSeries(now);
       expect(eligible[0].entry.seriesId).toBe("s2"); // more stale first
@@ -240,15 +242,14 @@ describe("scheduler", () => {
       const f = upsertSeries("t1", makeGridSeries("done", "2026-03-12T10:00:00Z"));
       f.state = makeState({ id: "done", started: true, finished: true });
 
-      // P3 — future
+      // SKIP — future (>30min)
       upsertSeries("t1", makeGridSeries("far", "2026-03-15T12:00:00Z"));
 
       const counts = getTierCounts(now);
       expect(counts.P0).toBe(1);
-      expect(counts.SKIP).toBe(1);
-      expect(counts.P3).toBe(1);
+      expect(counts.SKIP).toBe(2); // finished + future
+      expect(counts.P3).toBe(0);
       expect(counts.P1).toBe(0);
-      expect(counts.P2).toBe(0);
     });
   });
 });
