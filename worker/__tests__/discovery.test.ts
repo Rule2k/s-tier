@@ -45,9 +45,7 @@ describe("discovery", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     schedulerMock.getRegistry.mockReturnValue(new Map());
-    schedulerMock.getSeriesForTournament.mockReturnValue([
-      { seriesId: "series-old" },
-    ]);
+    schedulerMock.getSeriesForTournament.mockReturnValue([]);
     schedulerMock.removeSeriesNotIn.mockReturnValue(1);
     redisMock.zrangebyscore.mockResolvedValue(["t1", "t-stale"]);
     redisWriterMock.writeTournaments.mockResolvedValue(undefined);
