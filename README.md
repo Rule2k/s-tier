@@ -1,187 +1,165 @@
 # S-Tier
 
-CS2 match tracker built on top of Grid APIs, with Redis-backed caching, background refresh, tournament navigation, and per-map score details.
+CS2 match tracker built on Grid APIs, with Redis-backed caching, priority-based background refresh, tournament navigation, and per-map score details.
 
 ## Overview
 
-S-Tier is designed around a simple idea: keep the UI fast and predictable by reading precomputed tournament data from Redis whenever possible, while a worker continuously refreshes tournament and match state in the background.
+S-Tier keeps the UI fast by reading precomputed tournament data from Redis, while a background worker continuously refreshes tournament and match state from Grid's GraphQL APIs.
 
-The result is a small system with three clear responsibilities:
+Three services with clear responsibilities:
 
-- `app`: renders the UI and exposes API routes for tournament data
-- `worker`: fetches Grid data on a schedule and populates Redis
-- `redis`: stores the tournament index, tournament payloads, and per-series state
+- **app** — renders the UI and exposes API routes for tournament data
+- **worker** — fetches Grid data on a priority-based schedule and populates Redis
+- **redis** — stores the tournament index, series metadata, and live match state
 
 ## Architecture
 
 ```text
-┌────────────────────────────────────────────────────────────┐
-│ Docker Compose / local stack                              │
-│                                                            │
-│  ┌──────────────┐      ┌──────────────┐      ┌──────────┐  │
-│  │ Next.js app  │─────▶│    Redis     │◀─────│  worker  │  │
-│  │ + API routes │      │ cache/store  │      │ refresh  │  │
-│  └──────────────┘      └──────────────┘      └──────────┘  │
-└────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────┐
+│ Docker Compose                                                │
+│                                                                │
+│  ┌──────────────┐      ┌──────────────┐      ┌─────────────┐  │
+│  │ Next.js app  │─────>│    Redis     │<─────│   worker    │  │
+│  │ + API routes │      │ cache/store  │      │ scheduler   │  │
+│  └──────────────┘      └──────────────┘      └──────┬──────┘  │
+│                                                      │         │
+│                                              ┌───────▼───────┐ │
+│                                              │   Grid APIs   │ │
+│                                              │ Central + Live│ │
+│                                              └───────────────┘ │
+└──────────────────────────────────────────────────────────────┘
 ```
 
-### Runtime data flow
+### Data flow
 
-1. The worker fetches tournament series from Grid Central.
-2. The worker fetches live series state for relevant matches from Grid Live.
-3. The worker builds normalized tournament objects and writes them to Redis.
-4. The app reads tournaments from Redis through `/api/matches`.
-5. If Redis is missing a tournament, the API route rebuilds it on demand from Grid.
-6. The frontend uses React Query to poll and cache API responses in the browser.
+1. The worker discovers tournaments via Grid Central Data API (paginated GraphQL, filtered by tracked teams).
+2. For each tournament, it fetches the full series list and writes normalized data to Redis.
+3. A priority-based scheduler polls live series state via Grid Live Data Feed API.
+4. The app reads from Redis through `/api/tournaments`.
+5. The frontend uses React Query to poll the API every 30 seconds.
 
-## Technical solutions
+## Worker
 
-### 1. Redis-first API layer
+The worker entry point is [`worker/index.ts`](./worker/index.ts). It runs two loops:
 
-The app does not query Grid directly from the browser. Instead:
+### Discovery loop (every 5 min)
 
-- `/api/matches` returns normalized tournament payloads
-- `/api/tournament-index` returns lightweight tournament summaries
-- Redis is used as the first read layer for both endpoints
+Handled by [`worker/discovery.ts`](./worker/discovery.ts):
 
-This keeps the UI simple and avoids leaking upstream API complexity into React components.
+- Discovers tournaments where tracked teams participate (server-side filter via team IDs)
+- Fetches the full series list for each active tournament
+- Skips re-fetching tournaments where all series are finished
+- Writes tournament index and series data to Redis
+- Prunes stale tournaments no longer in the tracked set
 
-### 2. Background refresh instead of heavy client polling
+### Series refresh loop (every 15s)
 
-The worker in [`worker/refresh.ts`](./worker/refresh.ts) refreshes the dataset every 60 seconds.
+Handled by [`worker/series-refresh.ts`](./worker/series-refresh.ts):
 
-It is responsible for:
+- Uses a priority-based scheduler ([`worker/scheduler.ts`](./worker/scheduler.ts)) to decide which series to poll
+- Fetches live state from Grid Live Data Feed API
+- Writes series state to Redis
 
-- rebuilding the tournament index
-- refreshing per-series live state
-- storing normalized tournaments with status-aware TTLs
+Priority tiers:
 
-This reduces API load and keeps the app responsive even when multiple tournaments are displayed.
+| Tier | Interval | Criteria |
+|------|----------|----------|
+| P0 | 15s | Live matches (`started: true`, `finished: false`) |
+| P1 | 2 min | Starting within 30 min (no state yet) |
+| P3 | 30 min | Past matches without state (backfill) |
+| SKIP | — | Finished, future (>30 min), or stale live (>24h) |
 
-It also exists to stay within Grid rate limits. At the time of writing, the relevant limits are:
+Additional scheduling features:
 
-- Grid `Series State`: 180 requests per minute overall
-- Grid `Series State`: 6 requests per minute per series
-- Grid `Central Data`: 20 requests per minute
+- Exponential backoff on fetch failures (2^n * 15s, capped at 5 min)
+- Demotion to P3 after 10 consecutive failures
+- Automatic cleanup of stale "live" matches (>24h since scheduled time → marked finished)
 
-Without Redis and background refresh, a client-driven approach would make it much easier to exceed those limits, especially when multiple users are watching the same tournaments or when several live series are displayed at once.
+### Rate limiting
 
-### 3. Status-aware cache TTLs
+Token bucket rate limiter ([`worker/rate-limiter.ts`](./worker/rate-limiter.ts)) enforces Grid API limits:
 
-Redis TTLs are not fixed for every tournament. They depend on match state:
+- Central Data: 20 requests/min
+- Live Data Feed: 180 requests/min (global), 6 requests/min (per series)
 
-- running tournament: 60s
-- upcoming tournament: 120s
-- finished tournament: 7 days
-- finished match state: 7 days
+### Leader election
 
-The rules live in [`src/lib/redis/keys.ts`](./src/lib/redis/keys.ts).
+Only one worker instance runs at a time. Leader election via Redis `SET NX` with a 45s lock TTL, renewed every 15s. See [`worker/lock.ts`](./worker/lock.ts).
 
-The cache is not only a performance optimization. It is also a rate-limit protection layer in front of Grid:
+## Redis
 
-- the tournament index is cached to avoid repeated Central Data reads
-- tournament payloads are cached so the app can serve repeated requests without rehydrating everything from Grid
-- per-series state is cached so live polling stays bounded even when the same series is requested repeatedly
+Key schema and TTLs defined in [`src/shared/redis-keys.ts`](./src/shared/redis-keys.ts).
 
-### 4. Small, testable domain helpers
+| Key pattern | Type | TTL |
+|---|---|---|
+| `s-tier:tournaments` | Sorted Set | None (rewritten each discovery cycle) |
+| `s-tier:tournament:{id}` | JSON | None |
+| `s-tier:tournament:{id}:series` | Sorted Set | None |
+| `s-tier:series:{id}` | JSON | None |
+| `s-tier:series:{id}:state` | JSON | None (finished) / 6h (live fallback) |
+| `s-tier:meta:*` | String | 1h |
+| `s-tier:worker:heartbeat` | String | 2 min |
 
-A lot of logic has been extracted into small pure utilities under `src/lib/` so it can be reused and unit-tested independently:
+## API routes
 
-- tournament selection and sorting
-- tournament status and summary computation
-- match helpers such as `isStartingSoon`, `getPlayedMaps`, and `getMapWinnerIndex`
-- team extraction and tournament filtering
+### `GET /api/tournaments`
 
-This keeps React components focused on presentation rather than business rules.
+[`src/app/api/tournaments/route.ts`](./src/app/api/tournaments/route.ts)
 
-### 5. Split Grid integration by responsibility
+Returns tournaments with their matches from Redis.
 
-Grid integration is intentionally split into focused modules:
+| Param | Description |
+|---|---|
+| `id` | Single tournament by ID |
+| `limit` | Number of tournaments (default 5, max 20) |
+| `offset` | Pagination offset |
 
-- fetch tournament series from Grid Central
-- fetch live series state from Grid Live
-- map Grid responses into internal match/tournament objects
+Response: `{ tournaments, hasMore, total }`
 
-The public entry point remains [`src/lib/grid/fetchTournaments.ts`](./src/lib/grid/fetchTournaments.ts), which now re-exports focused helpers rather than owning all logic itself.
+### `GET /api/health`
 
-### 6. React Query for frontend data consistency
+[`src/app/api/health/route.ts`](./src/app/api/health/route.ts)
 
-The frontend uses React Query to manage remote state:
+Returns worker health status (heartbeat, discovery timestamp).
 
-- tournament list polling every 60 seconds
-- tournament index caching with a longer stale window
-
-This avoids ad-hoc fetch logic in components and keeps refresh behavior explicit.
-
-## Frontend architecture
+## Frontend
 
 ### Main UI flow
 
-- [`src/app/page.tsx`](./src/app/page.tsx): screen composition and team filtering
-- [`src/hooks/useTournamentNavigation.ts`](./src/hooks/useTournamentNavigation.ts): merge default and lazily loaded tournaments, previous/next navigation
-- [`src/components/tournament/TournamentTimeline.tsx`](./src/components/tournament/TournamentTimeline.tsx): timeline of tournament blocks
-- [`src/components/tournament/TournamentBlock.tsx`](./src/components/tournament/TournamentBlock.tsx): tournament header, collapse state, date groups
-- [`src/components/timeline/MatchCard.tsx`](./src/components/timeline/MatchCard.tsx): match presentation and scoreboard layout
+- [`src/app/page.tsx`](./src/app/page.tsx) — page composition and team filtering
+- [`src/hooks/useTournaments.ts`](./src/hooks/useTournaments.ts) — React Query data fetching (30s refetch)
+- [`src/hooks/useTournamentNavigation.ts`](./src/hooks/useTournamentNavigation.ts) — pagination and lazy loading
+- [`src/components/tournament/TournamentTimeline.tsx`](./src/components/tournament/TournamentTimeline.tsx) — timeline of tournament blocks
+- [`src/components/tournament/TournamentBlock.tsx`](./src/components/tournament/TournamentBlock.tsx) — tournament header, collapse state, date groups
+- [`src/components/timeline/MatchCard.tsx`](./src/components/timeline/MatchCard.tsx) — match card with scores and map details
 
-### UI behavior implemented in the app
+### UI features
 
-- sticky tournament headers
-- sticky date separators inside tournament blocks
-- collapsible tournaments
-- team-based filtering without corrupting tournament-level status
-- live/upcoming/finished visual states
+- Sticky tournament headers and date separators
+- Collapsible tournament blocks
+- Team-based filtering
+- Live / upcoming / finished visual states
 
-## Backend and data modules
+### Utility functions
 
-### API routes
+Match helpers in [`src/utils/matches/`](./src/utils/matches/):
+`groupByDate`, `formatDateRange`, `isStartingSoon`, `getPlayedMaps`, `getMapWinnerIndex`
 
-- [`src/app/api/matches/route.ts`](./src/app/api/matches/route.ts)
-  - returns default tournaments
-  - supports `?tournamentId=...`
-  - reads Redis first, falls back to Grid when needed
+Tournament helpers in [`src/utils/tournaments/`](./src/utils/tournaments/):
+`getTournamentStatus`, `getTournamentSummary`, `filterTournamentsByTeam`, `buildTimelineRows`, `sortTournamentsByStartDate`, and others.
 
-- [`src/app/api/tournament-index/route.ts`](./src/app/api/tournament-index/route.ts)
-  - returns the tournament summary index
+## Testing
 
-### Grid integration
+Tests live in `__tests__/` directories next to the code they test.
 
-- [`src/lib/grid/fetchTournamentSeries.ts`](./src/lib/grid/fetchTournamentSeries.ts)
-- [`src/lib/grid/fetchSeriesStates.ts`](./src/lib/grid/fetchSeriesStates.ts)
-- [`src/lib/grid/buildTournament.ts`](./src/lib/grid/buildTournament.ts)
-- [`src/lib/grid/mappers/mapMatch.ts`](./src/lib/grid/mappers/mapMatch.ts)
+- **Unit tests** — pure helpers in `src/utils/**/__tests__/`
+- **Component tests** — UI behavior in `src/components/**/__tests__/`
+- **Hook tests** — `src/hooks/__tests__/`
+- **Route tests** — `src/app/api/**/__tests__/`
+- **Worker tests** — `worker/__tests__/`
+- **E2E tests** — Playwright in `e2e/`
 
-### Tournament domain helpers
-
-- [`src/lib/tournaments/selectRelevantTournaments.ts`](./src/lib/tournaments/selectRelevantTournaments.ts)
-- [`src/lib/tournaments/fetchTournamentSeriesIndex.ts`](./src/lib/tournaments/fetchTournamentSeriesIndex.ts)
-- [`src/lib/tournaments/getTournamentStatus.ts`](./src/lib/tournaments/getTournamentStatus.ts)
-- [`src/lib/tournaments/getTournamentSummary.ts`](./src/lib/tournaments/getTournamentSummary.ts)
-- [`src/lib/tournaments/filterTournamentsByTeam.ts`](./src/lib/tournaments/filterTournamentsByTeam.ts)
-
-### Match domain helpers
-
-- [`src/lib/matches/groupByDate.ts`](./src/lib/matches/groupByDate.ts)
-- [`src/lib/matches/formatDateRange.ts`](./src/lib/matches/formatDateRange.ts)
-- [`src/lib/matches/isStartingSoon.ts`](./src/lib/matches/isStartingSoon.ts)
-- [`src/lib/matches/getPlayedMaps.ts`](./src/lib/matches/getPlayedMaps.ts)
-- [`src/lib/matches/getMapWinnerIndex.ts`](./src/lib/matches/getMapWinnerIndex.ts)
-
-## Testing strategy
-
-Tests are organized in local `__tests__` folders instead of living next to production files.
-
-Current test layers:
-
-- unit tests for pure helpers in `src/lib/**/__tests__`
-- component tests for UI behavior in `src/components/**/__tests__`
-- hook tests in `src/hooks/__tests__`
-- route tests in `src/app/api/**/__tests__`
-
-Tooling:
-
-- Vitest + Testing Library for unit/component tests
-- jsdom for UI tests
-- Playwright for E2E
+Tooling: Vitest + Testing Library (jsdom), Playwright (Chromium only).
 
 ## Project structure
 
@@ -189,8 +167,8 @@ Tooling:
 src/
   app/
     api/
-      matches/
-      tournament-index/
+      health/
+      tournaments/
     layout.tsx
     page.tsx
     providers.tsx
@@ -205,37 +183,62 @@ src/
     useTournamentNavigation.ts
     useTournaments.ts
   lib/
-    grid/
-    matches/
     redis/
+  shared/
+    types/
+    redis-keys.ts
+    config.ts
+    worker-runtime.ts
+  utils/
+    matches/
     teams/
     tournaments/
+  types/
+    match.ts
   test/
     fixtures/
     setup.ts
-  types/
 worker/
-  refresh.ts
+  index.ts
+  config.ts
+  discovery.ts
+  series-refresh.ts
+  scheduler.ts
+  redis-writer.ts
+  rate-limiter.ts
+  lock.ts
+  logger.ts
+  grid/
+    client.ts
+    central-data.ts
+    series-state.ts
+    queries.ts
+  types/
+    grid.ts
+    rate-limiter.ts
+    scheduler.ts
+e2e/
+  matches.spec.ts
 ```
 
 ## Environment variables
 
 | Variable | Description |
-|----------|-------------|
-| `GRID_API_KEY` | Grid API key used for Central and Live API calls |
+|---|---|
+| `GRID_API_KEY` | Grid API key (Central Data + Live Data Feed) |
 | `REDIS_URL` | Redis connection URL |
 
-See [`.env.example`](./.env.example) for the expected format.
+See [`.env.example`](./.env.example).
 
 ## Scripts
 
 ```bash
-npm run dev
-npm run build
-npm run lint
-npm test
-npm run test:watch
-npm run test:e2e
+npm run dev          # Start Next.js dev server
+npm run build        # Production build
+npm run lint         # ESLint
+npm test             # Unit tests (Vitest)
+npm run test:watch   # Watch mode
+npm run test:e2e     # E2E tests (Playwright)
 ```
 
 ## Local development
@@ -266,6 +269,6 @@ docker run -d -p 6379:6379 redis:7-alpine
 3. Start the worker and app in separate terminals:
 
 ```bash
-npx tsx worker/refresh.ts
+npx tsx worker/index.ts
 npm run dev
 ```
