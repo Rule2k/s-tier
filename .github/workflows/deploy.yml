@@ -38,10 +38,7 @@ jobs:
 
             export GRID_API_KEY=${{ secrets.GRID_API_KEY }}
 
-            docker compose up -d redis
-            docker compose exec -T redis sh -lc "redis-cli --scan --pattern 's-tier:*' | xargs -r redis-cli DEL"
-
-            docker compose up -d --build --force-recreate app worker
+            docker compose up -d --build --force-recreate
             git rev-parse HEAD
             docker compose ps
             docker image prune -f
