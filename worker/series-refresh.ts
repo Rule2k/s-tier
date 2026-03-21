@@ -11,7 +11,7 @@ import {
   cleanupPerSeriesBuckets,
   getRemaining,
 } from "./rate-limiter";
-import { logError } from "./logger";
+import { logError, logApiStats } from "./logger";
 import { config } from "./config";
 
 interface RateLimitHeaders {
@@ -127,6 +127,10 @@ export const runRefreshCycle = async (): Promise<void> => {
     const duration = ((Date.now() - start) / 1000).toFixed(1);
     const stopReason = rateLimited ? "rate-limited" : budgetExhausted ? "budget-exhausted" : "done";
     console.log(`[refresh] Cycle #${cycleNumber} finished in ${duration}s — fetched: ${totalFetched}, errors: ${errors}, stop: ${stopReason} — budget: ${getRemaining(liveGlobalBucket)}/180`);
+
+    if (cycleNumber % 80 === 0) {
+      logApiStats();
+    }
   } catch (error) {
     logError(`Series refresh cycle #${cycleNumber} failed`, error);
   }

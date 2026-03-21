@@ -1,6 +1,6 @@
 import { startDiscoveryLoop } from "./discovery";
 import { startSeriesRefreshLoop } from "./series-refresh";
-import { logWorkerStart, logError } from "./logger";
+import { logWorkerStart, logError, logApiStats } from "./logger";
 import { hydrateSchedulerFromRedis } from "./discovery";
 import {
   acquireWorkerLock,
@@ -27,6 +27,7 @@ const waitForLeadership = async (): Promise<void> => {
 const registerShutdownHandlers = () => {
   const shutdown = (signal: NodeJS.Signals) => {
     console.log(`[worker] Received ${signal}, releasing lock`);
+    logApiStats();
     void releaseWorkerLock().finally(() => process.exit(0));
   };
 

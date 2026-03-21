@@ -2,11 +2,14 @@ import type { RateLimit } from "./types/rate-limiter";
 
 const WINDOW_MS = 60_000; // 1 minute
 
+export const workerStartedAt = Date.now();
+
 export const createRateLimit = (limit: number): RateLimit => ({
   limit,
   windowMs: WINDOW_MS,
   count: 0,
   windowStart: Date.now(),
+  totalConsumed: 0,
 });
 
 /** Reset the window if it has elapsed. */
@@ -22,6 +25,7 @@ export const tryConsume = (rl: RateLimit): boolean => {
   maybeResetWindow(rl);
   if (rl.count < rl.limit) {
     rl.count++;
+    rl.totalConsumed++;
     return true;
   }
   return false;
@@ -32,6 +36,7 @@ export const waitForToken = async (rl: RateLimit): Promise<void> => {
   maybeResetWindow(rl);
   if (rl.count < rl.limit) {
     rl.count++;
+    rl.totalConsumed++;
     return;
   }
 
@@ -43,6 +48,7 @@ export const waitForToken = async (rl: RateLimit): Promise<void> => {
 
   maybeResetWindow(rl);
   rl.count++;
+  rl.totalConsumed++;
 };
 
 /** How many requests remain in the current window. */
@@ -61,6 +67,9 @@ export const drainBucket = (rl: RateLimit): void => {
 
 // Keep old name for logger compatibility
 export const getTokenCount = getRemaining;
+
+/** Total requests consumed since worker start. */
+export const getTotalConsumed = (rl: RateLimit): number => rl.totalConsumed;
 
 // --- Singleton instances ---
 

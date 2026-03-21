@@ -7,4 +7,6 @@ export interface RateLimit {
   count: number;
   /** Start of the current window. */
   windowStart: number;
+  /** Total requests consumed since worker start. */
+  totalConsumed: number;
 }
