@@ -72,11 +72,19 @@ export const runDiscoveryCycle = async (): Promise<void> => {
 
     for (const tournament of tracked) {
       try {
-        // Skip re-fetching tournaments where all series are finished
+        // Skip re-fetching tournaments where all series are done
+        // A series is "done" if finished via state OR scheduled >24h ago with no state
         const existingSeries = getSeriesForTournament(tournament.id);
+        const now = Date.now();
+        const isSeriesDone = (e: typeof existingSeries[number]) => {
+          if (e.state?.finished) return true;
+          if (e.state?.started) return false; // live — not done
+          const scheduled = new Date(e.gridSeries.startTimeScheduled).getTime();
+          return now - scheduled > 24 * 60 * 60 * 1000;
+        };
         if (
           existingSeries.length > 0 &&
-          existingSeries.every((e) => e.state?.finished)
+          existingSeries.every(isSeriesDone)
         ) {
           skippedFinished++;
           processedTournamentIds.add(tournament.id);
