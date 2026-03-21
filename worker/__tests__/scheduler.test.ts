@@ -8,6 +8,7 @@ import {
   clearRegistry,
   getRegistry,
   removeSeriesNotIn,
+  cleanupStaleLiveSeries,
   TIER_INTERVALS,
 } from "../scheduler";
 import type { SeriesEntry } from "../types/scheduler";
@@ -60,6 +61,12 @@ describe("scheduler", () => {
     it("returns P0 for started & not finished (live)", () => {
       const state = makeState({ started: true, finished: false });
       expect(classifyTier(state, "2026-03-12T11:00:00Z", now)).toBe("P0");
+    });
+
+    it("returns SKIP for live series scheduled > 24h ago (stale)", () => {
+      const state = makeState({ started: true, finished: false });
+      // Scheduled 2 days ago — stale live state
+      expect(classifyTier(state, "2026-03-10T11:00:00Z", now)).toBe("SKIP");
     });
 
     it("returns P3 for scheduled in the past with no state (backfill)", () => {
@@ -227,6 +234,39 @@ describe("scheduler", () => {
       entry.lastFetchedAt = now - 121_000;
       const eligible2 = getEligibleSeries(now);
       expect(eligible2).toHaveLength(1);
+    });
+  });
+
+  describe("cleanupStaleLiveSeries", () => {
+    const now = new Date("2026-03-12T12:00:00Z").getTime();
+
+    it("marks stale live series as finished and returns their IDs", () => {
+      // Live but scheduled 2 days ago — stale
+      const e1 = upsertSeries("t1", makeGridSeries("stale1", "2026-03-10T10:00:00Z"));
+      e1.state = makeState({ id: "stale1", started: true, finished: false });
+
+      // Live but scheduled 30 min ago — not stale
+      const e2 = upsertSeries("t1", makeGridSeries("fresh", "2026-03-12T11:30:00Z"));
+      e2.state = makeState({ id: "fresh", started: true, finished: false });
+
+      const staleIds = cleanupStaleLiveSeries(now);
+
+      expect(staleIds).toEqual(["stale1"]);
+      expect(e1.state?.finished).toBe(true);
+      expect(e2.state?.finished).toBe(false);
+    });
+
+    it("ignores already finished series", () => {
+      const e = upsertSeries("t1", makeGridSeries("done", "2026-03-10T10:00:00Z"));
+      e.state = makeState({ id: "done", started: true, finished: true });
+
+      expect(cleanupStaleLiveSeries(now)).toEqual([]);
+    });
+
+    it("ignores series without state", () => {
+      upsertSeries("t1", makeGridSeries("nostate", "2026-03-10T10:00:00Z"));
+
+      expect(cleanupStaleLiveSeries(now)).toEqual([]);
     });
   });
 

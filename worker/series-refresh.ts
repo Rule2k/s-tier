@@ -1,8 +1,9 @@
 import { fetchSeriesState } from "./grid/series-state";
-import { writeSeriesState, writeSeriesMeta, writeHeartbeat } from "./redis-writer";
+import { writeSeriesState, writeSeriesMeta, writeHeartbeat, markSeriesStateFinished } from "./redis-writer";
 import {
   getEligibleSeries,
   getRegistry,
+  cleanupStaleLiveSeries,
 } from "./scheduler";
 import {
   tryConsume,
@@ -44,6 +45,13 @@ export const runRefreshCycle = async (): Promise<void> => {
 
   try {
     await writeHeartbeat();
+
+    // Auto-fix stale "live" matches in Redis (started >24h ago, never finished)
+    const staleIds = cleanupStaleLiveSeries();
+    if (staleIds.length > 0) {
+      console.log(`[refresh] Cleaning up ${staleIds.length} stale live series: ${staleIds.join(", ")}`);
+      await Promise.all(staleIds.map(markSeriesStateFinished));
+    }
 
     const series = getEligibleSeries();
 

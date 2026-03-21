@@ -2,6 +2,7 @@ import type { GridSeries, GridSeriesState } from "./types/grid";
 import type { PriorityTier, SeriesEntry, EligibleSeries, TierCounts } from "./types/scheduler";
 
 const THIRTY_MINUTES_MS = 30 * 60 * 1000;
+const STALE_LIVE_THRESHOLD_MS = 24 * 60 * 60 * 1000;
 
 export const TIER_INTERVALS: Record<Exclude<PriorityTier, "SKIP">, number> = {
   P0: 15_000,      // 15s — live matches
@@ -16,7 +17,11 @@ export const classifyTier = (
 ): PriorityTier => {
   // If we have state, use it for started/finished detection
   if (state?.finished) return "SKIP";
-  if (state?.started && !state.finished) return "P0";
+  if (state?.started && !state.finished) {
+    const scheduledTime = new Date(scheduledAt).getTime();
+    if (now - scheduledTime > STALE_LIVE_THRESHOLD_MS) return "SKIP";
+    return "P0";
+  }
 
   // No state or not started — classify by scheduled time
   const scheduledTime = new Date(scheduledAt).getTime();
@@ -165,6 +170,22 @@ export const getSeriesForTournament = (
     if (entry.tournamentId === tournamentId) entries.push(entry);
   }
   return entries;
+};
+
+export const cleanupStaleLiveSeries = (now = Date.now()): string[] => {
+  const staleIds: string[] = [];
+
+  for (const entry of registry.values()) {
+    if (!entry.state?.started || entry.state.finished) continue;
+
+    const scheduledTime = new Date(entry.gridSeries.startTimeScheduled).getTime();
+    if (now - scheduledTime > STALE_LIVE_THRESHOLD_MS) {
+      entry.state.finished = true;
+      staleIds.push(entry.seriesId);
+    }
+  }
+
+  return staleIds;
 };
 
 export const clearRegistry = (): void => {

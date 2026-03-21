@@ -165,6 +165,25 @@ export const writeSeriesState = async (
   }
 };
 
+export const markSeriesStateFinished = async (
+  seriesId: string,
+): Promise<boolean> => {
+  try {
+    const raw = await redis.get(REDIS_KEYS.seriesState(seriesId));
+    if (!raw) return false;
+
+    const state = JSON.parse(raw) as FetchedSeriesState;
+    state.finished = true;
+
+    // Finished — static, no TTL
+    await redis.set(REDIS_KEYS.seriesState(seriesId), JSON.stringify(state));
+    return true;
+  } catch (error) {
+    logError(`Redis markFinished failed (${seriesId})`, error);
+    return false;
+  }
+};
+
 // --- Series metadata ---
 
 export const writeSeriesMeta = async (
