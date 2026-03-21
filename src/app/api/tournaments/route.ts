@@ -145,16 +145,9 @@ const buildTournamentPayload = async (tournamentId: string) => {
 
 // --- Series → Match mapping ---
 
-const deriveStatus = (
-  state: RedisSeriesState | null,
-  scheduledAt?: string,
-): MatchStatus => {
-  if (!state) {
-    if (scheduledAt && new Date(scheduledAt).getTime() < Date.now()) return "finished";
-    return "not_started";
-  }
-  if (state.finished) return "finished";
-  if (state.started) return "running";
+const deriveStatus = (state: RedisSeriesState | null): MatchStatus => {
+  if (state?.finished) return "finished";
+  if (state?.started) return "running";
   return "not_started";
 };
 
@@ -162,7 +155,7 @@ const mapSeriesToMatch = (
   series: RedisSeries,
   state: RedisSeriesState | null,
 ): Match => {
-  const status = deriveStatus(state, series.startTimeScheduled);
+  const status = deriveStatus(state);
   const stateTeamsById = new Map(
     (state?.teams ?? []).map((team) => [team.id, team]),
   );

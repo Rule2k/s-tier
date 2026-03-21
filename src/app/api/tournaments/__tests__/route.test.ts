@@ -115,7 +115,7 @@ describe("/api/tournaments", () => {
     });
   });
 
-  it("marks a past scheduled match without state as finished", async () => {
+  it("marks a past scheduled match without state as not_started", async () => {
     vi.setSystemTime(new Date("2026-03-16T12:00:00Z"));
 
     const pipeline = createPipeline([
@@ -151,7 +151,7 @@ describe("/api/tournaments", () => {
     const response = await GET(new Request("http://localhost/api/tournaments?id=t1"));
     const body = await response.json();
 
-    expect(body.tournaments[0].matches[0].status).toBe("finished");
+    expect(body.tournaments[0].matches[0].status).toBe("not_started");
     vi.useRealTimers();
   });
 });
