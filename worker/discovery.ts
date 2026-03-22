@@ -94,7 +94,8 @@ export const runDiscoveryCycle = async (): Promise<void> => {
           continue;
         }
 
-        const series = await fetchTournamentSeries(tournament.id);
+        const rawSeries = await fetchTournamentSeries(tournament.id);
+        const series = rawSeries.filter((s) => s.type !== "LOOPFEED");
         processedTournamentIds.add(tournament.id);
         allSeries.push(...series);
         for (const s of series) {
