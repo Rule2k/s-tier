@@ -22,7 +22,7 @@ describe("TournamentBlock", () => {
         makeMatch({ id: "2", status: "running" }),
       ],
     });
-    const { container } = render(<TournamentBlock tournament={tournament} />);
+    const { container } = render(<TournamentBlock tournament={tournament} initiallyCollapsed={false} />);
     expect(container.querySelectorAll("[data-match-card]")).toHaveLength(2);
   });
 
@@ -41,7 +41,7 @@ describe("TournamentBlock", () => {
         }),
       ],
     });
-    render(<TournamentBlock tournament={tournament} />);
+    render(<TournamentBlock tournament={tournament} initiallyCollapsed={false} />);
     expect(screen.getByText("Finished")).toBeInTheDocument();
     expect(screen.getAllByText("Navi").length).toBeGreaterThanOrEqual(2);
   });
@@ -105,7 +105,7 @@ describe("TournamentBlock", () => {
       allMatches: [filteredMatch, runningMatch],
     });
 
-    render(<TournamentBlock tournament={tournament} />);
+    render(<TournamentBlock tournament={tournament} initiallyCollapsed={false} />);
 
     expect(screen.getByText("Live")).toBeInTheDocument();
     expect(screen.queryByText("Finished")).not.toBeInTheDocument();
@@ -120,7 +120,7 @@ describe("TournamentBlock", () => {
       ],
     });
 
-    const { container } = render(<TournamentBlock tournament={tournament} />);
+    const { container } = render(<TournamentBlock tournament={tournament} initiallyCollapsed={false} />);
     const separators = container.querySelectorAll("[data-date-separator]");
 
     expect(separators).toHaveLength(2);
@@ -138,7 +138,7 @@ describe("TournamentBlock", () => {
       ],
     });
 
-    const { container } = render(<TournamentBlock tournament={tournament} />);
+    const { container } = render(<TournamentBlock tournament={tournament} initiallyCollapsed={false} />);
     const toggleButton = screen.getByRole("button", { name: /close esl pro league season 23/i });
     const collapsedIndicator = container.querySelector("[data-collapsed-indicator]");
 

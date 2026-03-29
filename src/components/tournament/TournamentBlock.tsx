@@ -71,14 +71,16 @@ export const TournamentBlock = ({
   tournament,
   scrollTargetDate,
   scrollRef,
+  initiallyCollapsed = true,
 }: {
   tournament: TournamentView;
   scrollTargetDate?: string | null;
   scrollRef?: RefObject<HTMLDivElement | null>;
+  initiallyCollapsed?: boolean;
 }) => {
   const contentId = useId();
   const headerRef = useRef<HTMLDivElement>(null);
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(initiallyCollapsed);
   const [headerHeight, setHeaderHeight] = useState(0);
 
   const headerMatches = tournament.allMatches ?? tournament.matches;

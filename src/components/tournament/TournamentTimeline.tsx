@@ -4,6 +4,41 @@ import { useEffect, useRef } from "react";
 import type { TournamentView } from "@/types/match";
 import { TournamentBlock } from "./TournamentBlock";
 
+const findActiveTournamentId = (tournaments: TournamentView[]): string | null => {
+  const now = Date.now();
+
+  // Priority 1: tournament with live matches
+  const live = tournaments.find((t) =>
+    t.matches.some((m) => m.status === "running"),
+  );
+  if (live) return live.id;
+
+  // Priority 2: tournament in progress (has finished + upcoming, none running)
+  const inProgress = tournaments.find((t) => {
+    const hasFinished = t.matches.some((m) => m.status === "finished");
+    const hasUpcoming = t.matches.some((m) => m.status === "not_started");
+    return hasFinished && hasUpcoming;
+  });
+  if (inProgress) return inProgress.id;
+
+  // Priority 3: tournament with the closest future match
+  let closestId: string | null = null;
+  let smallestDiff = Infinity;
+
+  for (const t of tournaments) {
+    for (const m of t.matches) {
+      if (m.status !== "not_started" || !m.scheduledAt) continue;
+      const diff = new Date(m.scheduledAt).getTime() - now;
+      if (diff > 0 && diff < smallestDiff) {
+        smallestDiff = diff;
+        closestId = t.id;
+      }
+    }
+  }
+
+  return closestId;
+};
+
 const findClosestDateKey = (tournaments: TournamentView[]): string | null => {
   const now = new Date();
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
@@ -67,6 +102,7 @@ export const TournamentTimeline = ({
   const scrollRef = useRef<HTMLDivElement>(null);
   const hasScrolled = useRef(false);
 
+  const activeTournamentId = findActiveTournamentId(tournaments);
   const scrollTargetDate = findClosestDateKey(tournaments);
 
   useEffect(() => {
@@ -96,6 +132,7 @@ export const TournamentTimeline = ({
           tournament={tournament}
           scrollTargetDate={scrollTargetDate}
           scrollRef={scrollRef}
+          initiallyCollapsed={tournament.id !== activeTournamentId}
         />
       ))}
 
